@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -38,6 +39,30 @@ func (r *PostgresRepository) Create(ctx context.Context, newUser User) (User, er
 	}
 
 	return newUser, nil
+}
+
+func (r *PostgresRepository) FindByEmail(ctx context.Context, email string) (User, error) {
+	var found User
+	err := r.db.QueryRow(ctx, `
+		SELECT id, name, email, password_hash, role, created_at, updated_at
+		FROM users
+		WHERE email = $1
+	`, email).Scan(
+		&found.ID,
+		&found.Name,
+		&found.Email,
+		&found.PasswordHash,
+		&found.Role,
+		&found.CreatedAt,
+		&found.UpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return User{}, ErrNotFound
+	}
+	if err != nil {
+		return User{}, fmt.Errorf("find user by email: %w", err)
+	}
+	return found, nil
 }
 
 var _ Repository = (*PostgresRepository)(nil)

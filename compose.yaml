@@ -23,6 +23,8 @@ services:
       REFRESH_TOKEN_TTL: 720h
     ports:
       - "8080:8080"
+    volumes:
+      - ./certs:/app/certs:ro
     depends_on:
       - postgres
 

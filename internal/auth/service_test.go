@@ -17,6 +17,10 @@ func (r *repositoryStub) Create(_ context.Context, newUser user.User) (user.User
 	return newUser, nil
 }
 
+func (r *repositoryStub) FindByEmail(_ context.Context, email string) (user.User, error) {
+	return user.User{Email: email}, nil
+}
+
 func TestRegisterNormalizesEmailAndNeverAcceptsRole(t *testing.T) {
 	repository := &repositoryStub{}
 	service := NewService(repository, password.DefaultHasher())

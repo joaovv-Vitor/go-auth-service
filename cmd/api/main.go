@@ -11,9 +11,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/joaovv-Vitor/go-auth-service/internal/auth"
 	"github.com/joaovv-Vitor/go-auth-service/internal/config"
 	"github.com/joaovv-Vitor/go-auth-service/internal/database"
+	"github.com/joaovv-Vitor/go-auth-service/internal/password"
 	"github.com/joaovv-Vitor/go-auth-service/internal/server"
+	"github.com/joaovv-Vitor/go-auth-service/internal/token"
+	"github.com/joaovv-Vitor/go-auth-service/internal/user"
 )
 
 func main() {
@@ -40,7 +44,21 @@ func main() {
 	}
 	pingCancel()
 
-	srv := server.New(cfg, server.Dependencies{Database: db})
+	signer, err := token.LoadSigner(cfg.JWTPrivateKeyPath, cfg.JWTPublicKeyPath, cfg.JWTIssuer, cfg.AccessTokenTTL)
+	if err != nil {
+		log.Fatalf("load JWT keys: %v", err)
+	}
+	users := user.NewPostgresRepository(db)
+	hasher := password.DefaultHasher()
+	registerService := auth.NewService(users, hasher)
+	loginService := auth.NewLoginService(users, hasher, signer, token.NewStore(db), cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
+
+	srv := server.New(cfg, server.Dependencies{
+		Database:      db,
+		Registerer:    registerService,
+		Authenticator: loginService,
+		JWKProvider:   signer,
+	})
 
 	errCh := make(chan error, 1)
 	go func() {

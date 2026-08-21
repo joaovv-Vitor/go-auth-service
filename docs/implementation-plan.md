@@ -292,19 +292,19 @@ Critério de aceite:
 
 ### Fase 3 — Segurança criptográfica básica
 
-Status: em andamento. O hashing Argon2id com formato PHC e seus testes foram
-implementados na branch `v1`.
+Status: em andamento. O hashing Argon2id, carregamento de chaves RSA, emissão
+de access token RS256 e JWKS foram implementados na branch `v1`.
 
 Tarefas:
 
 - [x] implementar geração e verificação de hash Argon2id em formato PHC;
 - [ ] validar e carregar chaves RSA PEM no startup;
-- [ ] rejeitar chave ausente, inválida ou abaixo do tamanho mínimo definido;
-- [ ] calcular um `kid` estável para a chave pública;
-- [ ] implementar assinatura e validação local de JWT RS256;
+- [x] rejeitar chave ausente, inválida ou abaixo do tamanho mínimo definido;
+- [x] calcular um `kid` estável para a chave pública;
+- [x] implementar assinatura e validação local de JWT RS256;
 - [ ] implementar geração de refresh token com CSPRNG;
 - [ ] implementar hash e comparação constante do refresh token;
-- [ ] preencher o endpoint JWKS com a chave RSA pública real;
+- [x] preencher o endpoint JWKS com a chave RSA pública real;
 - [ ] criar testes unitários para todos os casos criptográficos e de expiração.
 
 Critério de aceite:
@@ -337,15 +337,19 @@ Critério de aceite:
 
 ### Fase 5 — Login e emissão de sessão
 
+Status: em andamento. A busca de usuário, verificação de senha, emissão de
+access token e persistência do primeiro refresh token foram implementadas na
+branch `v1`.
+
 Tarefas:
 
-- [ ] buscar usuário por e-mail normalizado;
-- [ ] verificar senha com comportamento equivalente para usuário ausente;
-- [ ] emitir JWT com claims e TTL definidos;
-- [ ] criar refresh token e persistir somente seu hash;
-- [ ] criar `family_id` para a nova sessão;
-- [ ] persistir sessão antes de devolver tokens;
-- [ ] registrar `POST /api/v1/auth/login`;
+- [x] buscar usuário por e-mail normalizado;
+- [x] verificar senha com comportamento equivalente para usuário ausente;
+- [x] emitir JWT com claims e TTL definidos;
+- [x] criar refresh token e persistir somente seu hash;
+- [x] criar `family_id` para a nova sessão;
+- [x] persistir sessão antes de devolver tokens;
+- [x] registrar `POST /api/v1/auth/login`;
 - [ ] responder `invalid_credentials` tanto para e-mail inexistente quanto para
   senha incorreta;
 - [ ] testar claims, assinatura, expiração e ausência de dados sensíveis.

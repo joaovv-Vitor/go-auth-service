@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"net/mail"
 	"strings"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/joaovv-Vitor/go-auth-service/internal/password"
+	"github.com/joaovv-Vitor/go-auth-service/internal/token"
 	"github.com/joaovv-Vitor/go-auth-service/internal/user"
 )
 
@@ -24,6 +27,96 @@ type RegisterInput struct {
 
 type Registerer interface {
 	Register(ctx context.Context, input RegisterInput) (user.User, error)
+}
+
+type LoginInput struct {
+	Email    string
+	Password string
+}
+
+type LoginResponse struct {
+	AccessToken  string
+	RefreshToken string
+	ExpiresIn    int64
+}
+
+type Authenticator interface {
+	Login(ctx context.Context, input LoginInput) (LoginResponse, error)
+}
+
+var ErrInvalidCredentials = errors.New("invalid credentials")
+
+type LoginService struct {
+	users interface {
+		FindByEmail(context.Context, string) (user.User, error)
+	}
+	hasher interface {
+		Verify(string, string) (bool, error)
+	}
+	access interface {
+		Issue(user.User) (string, error)
+	}
+	sessions interface {
+		Create(context.Context, uuid.UUID, token.RefreshToken) error
+	}
+	accessTTL  time.Duration
+	refreshTTL time.Duration
+}
+
+func NewLoginService(
+	users interface {
+		FindByEmail(context.Context, string) (user.User, error)
+	},
+	hasher interface {
+		Verify(string, string) (bool, error)
+	},
+	access interface {
+		Issue(user.User) (string, error)
+	},
+	sessions interface {
+		Create(context.Context, uuid.UUID, token.RefreshToken) error
+	},
+	accessTTL time.Duration,
+	refreshTTL time.Duration,
+) *LoginService {
+	return &LoginService{users: users, hasher: hasher, access: access, sessions: sessions, accessTTL: accessTTL, refreshTTL: refreshTTL}
+}
+
+func (s *LoginService) Login(ctx context.Context, input LoginInput) (LoginResponse, error) {
+	input.Email = strings.ToLower(strings.TrimSpace(input.Email))
+	if input.Email == "" || input.Password == "" || s.users == nil || s.hasher == nil || s.access == nil || s.sessions == nil {
+		return LoginResponse{}, ErrInvalidCredentials
+	}
+
+	found, err := s.users.FindByEmail(ctx, input.Email)
+	if err != nil {
+		if errors.Is(err, user.ErrNotFound) {
+			return LoginResponse{}, ErrInvalidCredentials
+		}
+		return LoginResponse{}, fmt.Errorf("find login user: %w", err)
+	}
+	valid, err := s.hasher.Verify(input.Password, found.PasswordHash)
+	if err != nil || !valid {
+		return LoginResponse{}, ErrInvalidCredentials
+	}
+
+	accessToken, err := s.access.Issue(found)
+	if err != nil {
+		return LoginResponse{}, fmt.Errorf("issue access token: %w", err)
+	}
+	refreshPlaintext, refresh, err := token.NewRefreshToken(s.refreshTTL)
+	if err != nil {
+		return LoginResponse{}, fmt.Errorf("issue refresh token: %w", err)
+	}
+	if err := s.sessions.Create(ctx, found.ID, refresh); err != nil {
+		return LoginResponse{}, fmt.Errorf("persist refresh token: %w", err)
+	}
+
+	return LoginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshPlaintext,
+		ExpiresIn:    int64(s.accessTTL.Seconds()),
+	}, nil
 }
 
 type Service struct {

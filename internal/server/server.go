@@ -14,12 +14,15 @@ import (
 
 	"github.com/joaovv-Vitor/go-auth-service/internal/auth"
 	"github.com/joaovv-Vitor/go-auth-service/internal/config"
+	"github.com/joaovv-Vitor/go-auth-service/internal/token"
 	"github.com/joaovv-Vitor/go-auth-service/internal/user"
 )
 
 type Dependencies struct {
-	Database   Pinger
-	Registerer auth.Registerer
+	Database      Pinger
+	Registerer    auth.Registerer
+	Authenticator auth.Authenticator
+	JWKProvider   interface{ PublicJWK() token.JWK }
 }
 
 func New(cfg config.Config, deps Dependencies) *http.Server {
@@ -133,6 +136,51 @@ func registerRoutes(api huma.API, cfg config.Config, deps Dependencies) {
 		return output, nil
 	})
 
+	type loginInput struct {
+		Body struct {
+			Email    string `json:"email" format:"email" maxLength:"320" doc:"User's email address" example:"joao@example.com"`
+			Password string `json:"password" minLength:"1" maxLength:"128" doc:"User's password" example:"senha-segura-123"`
+		}
+	}
+	type loginOutput struct {
+		Body struct {
+			AccessToken  string `json:"accessToken" doc:"Short-lived JWT access token"`
+			RefreshToken string `json:"refreshToken" doc:"Opaque refresh token"`
+			TokenType    string `json:"tokenType" example:"Bearer"`
+			ExpiresIn    int64  `json:"expiresIn" example:"900" doc:"Access token lifetime in seconds"`
+		}
+	}
+
+	huma.Register(api, huma.Operation{
+		OperationID:   "post-login",
+		Method:        http.MethodPost,
+		Path:          "/api/v1/auth/login",
+		Summary:       "Authenticate a user",
+		Tags:          []string{"Authentication"},
+		DefaultStatus: http.StatusOK,
+		Errors:        []int{http.StatusUnauthorized, http.StatusServiceUnavailable},
+	}, func(ctx context.Context, input *loginInput) (*loginOutput, error) {
+		if deps.Authenticator == nil {
+			return nil, huma.Error503ServiceUnavailable("authentication service unavailable")
+		}
+		result, err := deps.Authenticator.Login(ctx, auth.LoginInput{
+			Email:    input.Body.Email,
+			Password: input.Body.Password,
+		})
+		if err != nil {
+			if errors.Is(err, auth.ErrInvalidCredentials) {
+				return nil, huma.Error401Unauthorized("invalid credentials")
+			}
+			return nil, huma.Error500InternalServerError("could not authenticate user")
+		}
+		output := &loginOutput{}
+		output.Body.AccessToken = result.AccessToken
+		output.Body.RefreshToken = result.RefreshToken
+		output.Body.TokenType = "Bearer"
+		output.Body.ExpiresIn = result.ExpiresIn
+		return output, nil
+	})
+
 	type registerInput struct {
 		Body struct {
 			Name     string `json:"name" minLength:"1" maxLength:"120" doc:"User's display name" example:"João"`
@@ -190,7 +238,7 @@ func registerRoutes(api huma.API, cfg config.Config, deps Dependencies) {
 
 	type jwksOutput struct {
 		Body struct {
-			Keys []any `json:"keys" doc:"JSON Web Keys used to validate access tokens"`
+			Keys []token.JWK `json:"keys" doc:"JSON Web Keys used to validate access tokens"`
 		}
 	}
 
@@ -202,7 +250,11 @@ func registerRoutes(api huma.API, cfg config.Config, deps Dependencies) {
 		Tags:        []string{"Authentication"},
 	}, func(ctx context.Context, input *struct{}) (*jwksOutput, error) {
 		output := &jwksOutput{}
-		output.Body.Keys = []any{}
+		if deps.JWKProvider != nil {
+			output.Body.Keys = []token.JWK{deps.JWKProvider.PublicJWK()}
+		} else {
+			output.Body.Keys = []token.JWK{}
+		}
 		return output, nil
 	})
 }

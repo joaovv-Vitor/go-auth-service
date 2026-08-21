@@ -10,8 +10,15 @@ Base inicial do Auth Service em Go.
 ## Desenvolvimento
 
 1. Copie `.env.example` para `.env`.
-2. Ajuste as variáveis conforme seu ambiente.
-3. Execute:
+2. Gere as chaves RSA de desenvolvimento:
+
+```bash
+openssl genrsa -out certs/jwt.private.pem 2048
+openssl rsa -in certs/jwt.private.pem -pubout -out certs/jwt.public.pem
+```
+
+3. Ajuste as variáveis conforme seu ambiente.
+4. Execute:
 
 ```bash
 go run ./cmd/api
@@ -33,3 +40,6 @@ entradas/saídas e gera a especificação OpenAPI.
 ```bash
 docker compose up --build
 ```
+
+As chaves são montadas no container somente para desenvolvimento e não devem
+ser versionadas ou usadas em produção.

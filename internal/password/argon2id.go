@@ -55,6 +55,10 @@ func (h Hasher) Hash(plainText string) (string, error) {
 	), nil
 }
 
+func (h Hasher) Verify(plainText, encodedHash string) (bool, error) {
+	return Verify(plainText, encodedHash)
+}
+
 func Verify(plainText, encodedHash string) (bool, error) {
 	parts := strings.Split(encodedHash, "$")
 	if len(parts) != 6 || parts[0] != "" || parts[1] != phcAlgorithm || parts[2] != phcVersion {
