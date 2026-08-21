@@ -248,17 +248,20 @@ Critério de aceite:
 
 ### Fase 1 — Fundação da aplicação
 
+Status: em andamento. O primeiro incremento desta fase foi implementado na
+branch `v1`.
+
 Tarefas:
 
-- [ ] separar construção da aplicação do `main` para facilitar testes;
-- [ ] validar todas as configurações na inicialização, sem fallbacks silenciosos
+- [x] separar construção da aplicação do `main` para facilitar testes;
+- [x] validar todas as configurações na inicialização, sem fallbacks silenciosos
   para valores inválidos;
-- [ ] criar logger `slog` configurado por ambiente;
-- [ ] adicionar middlewares Chi de request ID, recovery e logging estruturado;
-- [ ] configurar Huma com metadados da API e security scheme `bearerAuth`;
+- [x] criar logger `slog` configurado por ambiente;
+- [x] adicionar middlewares Chi de request ID, recovery e logging estruturado;
+- [x] configurar Huma com metadados da API e security scheme `bearerAuth`;
 - [ ] padronizar o modelo de erro do Huma;
-- [ ] manter shutdown gracioso e timeouts HTTP;
-- [ ] adicionar testes do carregamento de configuração e do router básico.
+- [x] manter shutdown gracioso e timeouts HTTP;
+- [x] adicionar testes do carregamento de configuração e do router básico.
 
 Critério de aceite:
 
@@ -267,12 +270,15 @@ Critério de aceite:
 
 ### Fase 2 — PostgreSQL e migrations
 
+Status: em andamento. O pool pgx, as migrations iniciais e o ping de startup
+foram implementados na branch `v1`.
+
 Tarefas:
 
-- [ ] adicionar `pgxpool` e construir o pool no startup;
-- [ ] configurar limites do pool, tempo de conexão e health check;
-- [ ] criar migration `users`;
-- [ ] criar migration `refresh_tokens` com suporte à rotação;
+- [x] adicionar `pgxpool` e construir o pool no startup;
+- [x] configurar limites do pool, tempo de conexão e health check;
+- [x] criar migration `users`;
+- [x] criar migration `refresh_tokens` com suporte à rotação;
 - [ ] criar migrations de rollback correspondentes;
 - [ ] criar comando documentado para `migrate up/down`;
 - [ ] fazer `/health` verificar o banco com timeout curto;
@@ -286,9 +292,12 @@ Critério de aceite:
 
 ### Fase 3 — Segurança criptográfica básica
 
+Status: em andamento. O hashing Argon2id com formato PHC e seus testes foram
+implementados na branch `v1`.
+
 Tarefas:
 
-- [ ] implementar geração e verificação de hash Argon2id em formato PHC;
+- [x] implementar geração e verificação de hash Argon2id em formato PHC;
 - [ ] validar e carregar chaves RSA PEM no startup;
 - [ ] rejeitar chave ausente, inválida ou abaixo do tamanho mínimo definido;
 - [ ] calcular um `kid` estável para a chave pública;
@@ -305,17 +314,20 @@ Critério de aceite:
 
 ### Fase 4 — Cadastro de usuário
 
+Status: em andamento. O domínio, service, repository PostgreSQL e endpoint Huma
+de cadastro foram iniciados na branch `v1`.
+
 Tarefas:
 
-- [ ] criar modelo e repository de usuário;
-- [ ] implementar normalização de e-mail;
-- [ ] implementar validações de nome, e-mail e senha nos schemas Huma;
-- [ ] criar o caso de uso de cadastro;
-- [ ] gerar hash antes da persistência;
-- [ ] tratar violação UNIQUE como `email_already_exists`/`409`;
-- [ ] garantir role `USER` independentemente do payload;
-- [ ] registrar `POST /api/v1/auth/register` no Huma;
-- [ ] não retornar nem logar `password_hash`;
+- [x] criar modelo e repository de usuário;
+- [x] implementar normalização de e-mail;
+- [x] implementar validações de nome, e-mail e senha nos schemas Huma;
+- [x] criar o caso de uso de cadastro;
+- [x] gerar hash antes da persistência;
+- [x] tratar violação UNIQUE como `email_already_exists`/`409`;
+- [x] garantir role `USER` independentemente do payload;
+- [x] registrar `POST /api/v1/auth/register` no Huma;
+- [x] não retornar nem logar `password_hash`;
 - [ ] adicionar testes unitários, de repository e HTTP.
 
 Critério de aceite:
