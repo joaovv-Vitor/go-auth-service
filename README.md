@@ -21,7 +21,14 @@ openssl rsa -in certs/jwt.private.pem -pubout -out certs/jwt.public.pem
 4. Execute:
 
 ```bash
+go run ./cmd/migrate up
 go run ./cmd/api
+```
+
+Para desfazer apenas a última migration:
+
+```bash
+go run ./cmd/migrate down 1
 ```
 
 ## Endpoints iniciais

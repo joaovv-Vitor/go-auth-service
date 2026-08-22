@@ -270,8 +270,8 @@ Critério de aceite:
 
 ### Fase 2 — PostgreSQL e migrations
 
-Status: em andamento. O pool pgx, as migrations iniciais e o ping de startup
-foram implementados na branch `v1`.
+Status: em andamento. O pool pgx, as migrations iniciais, o binário de
+migrations e o encadeamento no Compose foram implementados na branch `v1`.
 
 Tarefas:
 
@@ -279,10 +279,10 @@ Tarefas:
 - [x] configurar limites do pool, tempo de conexão e health check;
 - [x] criar migration `users`;
 - [x] criar migration `refresh_tokens` com suporte à rotação;
-- [ ] criar migrations de rollback correspondentes;
-- [ ] criar comando documentado para `migrate up/down`;
-- [ ] fazer `/health` verificar o banco com timeout curto;
-- [ ] encerrar o pool durante o shutdown;
+- [x] criar migrations de rollback correspondentes;
+- [x] criar comando documentado para `migrate up/down`;
+- [x] fazer `/health` verificar o banco com timeout curto;
+- [x] encerrar o pool durante o shutdown;
 - [ ] adicionar teste de aplicação e rollback das migrations em banco limpo.
 
 Critério de aceite:
@@ -298,12 +298,12 @@ de access token RS256 e JWKS foram implementados na branch `v1`.
 Tarefas:
 
 - [x] implementar geração e verificação de hash Argon2id em formato PHC;
-- [ ] validar e carregar chaves RSA PEM no startup;
+- [x] validar e carregar chaves RSA PEM no startup;
 - [x] rejeitar chave ausente, inválida ou abaixo do tamanho mínimo definido;
 - [x] calcular um `kid` estável para a chave pública;
 - [x] implementar assinatura e validação local de JWT RS256;
-- [ ] implementar geração de refresh token com CSPRNG;
-- [ ] implementar hash e comparação constante do refresh token;
+- [x] implementar geração de refresh token com CSPRNG;
+- [x] implementar hash e comparação constante do refresh token;
 - [x] preencher o endpoint JWKS com a chave RSA pública real;
 - [ ] criar testes unitários para todos os casos criptográficos e de expiração.
 
@@ -350,9 +350,10 @@ Tarefas:
 - [x] criar `family_id` para a nova sessão;
 - [x] persistir sessão antes de devolver tokens;
 - [x] registrar `POST /api/v1/auth/login`;
-- [ ] responder `invalid_credentials` tanto para e-mail inexistente quanto para
+- [x] responder `invalid_credentials` tanto para e-mail inexistente quanto para
   senha incorreta;
-- [ ] testar claims, assinatura, expiração e ausência de dados sensíveis.
+- [x] testar claims, assinatura e ausência de dados sensíveis;
+- [ ] testar expiração do access token.
 
 Critério de aceite:
 
@@ -424,9 +425,12 @@ Critério de aceite:
 
 ### Fase 9 — Observabilidade e hardening HTTP
 
+Status: em andamento. Logging estruturado e limites de corpo fornecidos pelo
+Huma já estão ativos; o hardening restante ainda será revisado.
+
 Tarefas:
 
-- [ ] emitir logs JSON com timestamp, level, request ID, método, path, status e
+- [x] emitir logs JSON com timestamp, level, request ID, método, path, status e
   duração;
 - [ ] revisar redaction de headers, corpos e erros;
 - [ ] configurar limites de tamanho do corpo e timeouts;
@@ -463,13 +467,16 @@ Critério de aceite:
 
 ### Fase 11 — Container, CI e entrega
 
+Status: em andamento. A imagem inclui os binários da API e migrations, roda
+como usuário não-root e o Compose encadeia banco, migrations e API.
+
 Tarefas:
 
-- [ ] ajustar Dockerfile para cache de módulos com `go.sum`;
-- [ ] manter imagem final mínima e usuário não-root;
-- [ ] montar chaves por secret/volume, nunca por `COPY` no build;
+- [x] ajustar Dockerfile para cache de módulos com `go.sum`;
+- [x] manter imagem final mínima e usuário não-root;
+- [x] montar chaves por secret/volume, nunca por `COPY` no build;
 - [ ] adicionar healthcheck ao PostgreSQL e à API no Compose;
-- [ ] definir como migrations rodam antes da aplicação;
+- [x] definir como migrations rodam antes da aplicação;
 - [ ] adicionar pipeline de CI para build, testes, race quando viável, vet e
   vulnerabilidades;
 - [ ] documentar geração de chaves apenas para desenvolvimento;

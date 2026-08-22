@@ -35,4 +35,11 @@ func TestSignerIssuesRS256TokenAndJWKS(t *testing.T) {
 	if signer.PublicJWK().Kid != signer.KeyID() || signer.PublicJWK().Alg != "RS256" {
 		t.Fatalf("unexpected JWK: %+v", signer.PublicJWK())
 	}
+	validated, err := signer.Validate(tokenString)
+	if err != nil {
+		t.Fatalf("validate token: %v", err)
+	}
+	if validated.Subject != claims.Subject || validated.Email != claims.Email {
+		t.Fatalf("unexpected validated claims: %+v", validated)
+	}
 }

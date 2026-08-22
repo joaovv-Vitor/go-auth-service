@@ -9,6 +9,23 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d auth_service"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: ["/usr/local/bin/migrate"]
+    command: ["up"]
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/auth_service?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   api:
     build:
@@ -26,7 +43,8 @@ services:
     volumes:
       - ./certs:/app/certs:ro
     depends_on:
-      - postgres
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   postgres_data:
