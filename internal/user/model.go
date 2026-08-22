@@ -28,6 +28,7 @@ type User struct {
 type Repository interface {
 	Create(ctx context.Context, newUser User) (User, error)
 	FindByEmail(ctx context.Context, email string) (User, error)
+	FindByID(ctx context.Context, id uuid.UUID) (User, error)
 }
 
 var ErrNotFound = errors.New("user not found")

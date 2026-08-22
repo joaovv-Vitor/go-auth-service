@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/joaovv-Vitor/go-auth-service/internal/password"
 	"github.com/joaovv-Vitor/go-auth-service/internal/user"
 )
@@ -19,6 +20,10 @@ func (r *repositoryStub) Create(_ context.Context, newUser user.User) (user.User
 
 func (r *repositoryStub) FindByEmail(_ context.Context, email string) (user.User, error) {
 	return user.User{Email: email}, nil
+}
+
+func (r *repositoryStub) FindByID(_ context.Context, id uuid.UUID) (user.User, error) {
+	return user.User{ID: id, Email: "joao@example.com", Role: user.RoleUser}, nil
 }
 
 func TestRegisterNormalizesEmailAndNeverAcceptsRole(t *testing.T) {

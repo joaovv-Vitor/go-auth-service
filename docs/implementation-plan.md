@@ -361,15 +361,18 @@ Critério de aceite:
 
 ### Fase 6 — Autenticação Bearer e `/users/me`
 
+Status: em andamento. O middleware Huma de Bearer, validação RS256 e o endpoint
+`/api/v1/users/me` foram implementados na branch `v1`.
+
 Tarefas:
 
-- [ ] implementar middleware Huma que identifica operações com `bearerAuth`;
-- [ ] extrair Bearer token de forma rigorosa;
-- [ ] validar assinatura, algoritmo, issuer e expiração;
-- [ ] colocar identidade tipada no contexto;
-- [ ] carregar o usuário atual pelo `sub`;
-- [ ] registrar `GET /api/v1/users/me` com security scheme no OpenAPI;
-- [ ] responder `401` para token ausente/inválido/expirado;
+- [x] implementar middleware Huma que identifica operações com `bearerAuth`;
+- [x] extrair Bearer token de forma rigorosa;
+- [x] validar assinatura, algoritmo, issuer e expiração;
+- [x] colocar identidade tipada no contexto;
+- [x] expor a identidade do usuário a partir do `sub` e claims do JWT;
+- [x] registrar `GET /api/v1/users/me` com security scheme no OpenAPI;
+- [x] responder `401` para token ausente/inválido/expirado;
 - [ ] testar autorização no handler e o botão Authorize da documentação.
 
 Critério de aceite:
@@ -379,17 +382,20 @@ Critério de aceite:
 
 ### Fase 7 — Rotação de refresh token
 
+Status: em andamento. A rotação transacional, encadeamento, detecção de
+reutilização e endpoints de refresh/logout foram implementados na branch `v1`.
+
 Tarefas:
 
-- [ ] interpretar seletor e segredo sem expor o token em erros;
-- [ ] localizar e bloquear a linha do token em transação;
-- [ ] validar hash, expiração, revogação e estado de uso;
-- [ ] marcar o token atual como usado;
-- [ ] emitir novo JWT e novo refresh token;
-- [ ] inserir o novo token na mesma família e ligar a cadeia;
-- [ ] confirmar toda a rotação em uma única transação;
-- [ ] detectar reutilização e revogar a família inteira;
-- [ ] registrar `POST /api/v1/auth/refresh`;
+- [x] interpretar seletor e segredo sem expor o token em erros;
+- [x] localizar e bloquear a linha do token em transação;
+- [x] validar hash, expiração, revogação e estado de uso;
+- [x] marcar o token atual como usado;
+- [x] emitir novo JWT e novo refresh token;
+- [x] inserir o novo token na mesma família e ligar a cadeia;
+- [x] confirmar toda a rotação em uma única transação;
+- [x] detectar reutilização e revogar a família inteira;
+- [x] registrar `POST /api/v1/auth/refresh`;
 - [ ] testar duas requisições concorrentes usando o mesmo token.
 
 Critério de aceite:
@@ -399,11 +405,14 @@ Critério de aceite:
 
 ### Fase 8 — Logout e revogação
 
+Status: em andamento. O logout por refresh token e a revogação da família foram
+implementados na branch `v1`.
+
 Tarefas:
 
-- [ ] validar o refresh token recebido;
-- [ ] revogar todos os tokens ativos da família em transação;
-- [ ] registrar `POST /api/v1/auth/logout`;
+- [x] validar o refresh token recebido;
+- [x] revogar todos os tokens ativos da família em transação;
+- [x] registrar `POST /api/v1/auth/logout`;
 - [ ] definir resposta segura para token desconhecido, expirado ou já revogado;
 - [ ] testar que o access token atual continua válido até expirar;
 - [ ] testar que nenhum refresh da família funciona após logout.

@@ -27,6 +27,11 @@ go run ./cmd/api
 ## Endpoints iniciais
 
 - `GET /health`
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/refresh`
+- `POST /api/v1/auth/logout`
+- `GET /api/v1/users/me`
 - `GET /.well-known/jwks.json`
 - `GET /openapi.json` — especificação OpenAPI gerada pelo Huma
 - `GET /docs` — documentação interativa

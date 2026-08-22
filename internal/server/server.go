@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -23,6 +24,9 @@ type Dependencies struct {
 	Registerer    auth.Registerer
 	Authenticator auth.Authenticator
 	JWKProvider   interface{ PublicJWK() token.JWK }
+	TokenVerifier interface {
+		Validate(string) (*token.Claims, error)
+	}
 }
 
 func New(cfg config.Config, deps Dependencies) *http.Server {
@@ -51,6 +55,7 @@ func NewHandler(cfg config.Config, deps Dependencies) http.Handler {
 		},
 	}
 	api := humachi.New(router, apiConfig)
+	api.UseMiddleware(authMiddleware(api, deps.TokenVerifier))
 	registerRoutes(api, cfg, deps)
 
 	return router
@@ -63,6 +68,41 @@ type responseWriter struct {
 
 type Pinger interface {
 	Ping(context.Context) error
+}
+
+type claimsContextKey struct{}
+
+func authMiddleware(api huma.API, verifier interface {
+	Validate(string) (*token.Claims, error)
+}) func(huma.Context, func(huma.Context)) {
+	return func(ctx huma.Context, next func(huma.Context)) {
+		requiresAuth := false
+		for _, scheme := range ctx.Operation().Security {
+			if _, ok := scheme["bearerAuth"]; ok {
+				requiresAuth = true
+				break
+			}
+		}
+		if !requiresAuth {
+			next(ctx)
+			return
+		}
+		if verifier == nil {
+			huma.WriteErr(api, ctx, http.StatusServiceUnavailable, "authentication service unavailable")
+			return
+		}
+		header := ctx.Header("Authorization")
+		if len(header) <= len("Bearer ") || !strings.EqualFold(header[:len("Bearer ")], "Bearer ") {
+			huma.WriteErr(api, ctx, http.StatusUnauthorized, "invalid token")
+			return
+		}
+		claims, err := verifier.Validate(strings.TrimSpace(header[len("Bearer "):]))
+		if err != nil {
+			huma.WriteErr(api, ctx, http.StatusUnauthorized, "invalid token")
+			return
+		}
+		next(huma.WithValue(ctx, claimsContextKey{}, claims))
+	}
 }
 
 func (w *responseWriter) WriteHeader(status int) {
@@ -106,6 +146,21 @@ func responseStatus(status int) int {
 }
 
 func registerRoutes(api huma.API, cfg config.Config, deps Dependencies) {
+	type loginInput struct {
+		Body struct {
+			Email    string `json:"email" format:"email" maxLength:"320" doc:"User's email address" example:"joao@example.com"`
+			Password string `json:"password" minLength:"1" maxLength:"128" doc:"User's password" example:"senha-segura-123"`
+		}
+	}
+	type loginOutput struct {
+		Body struct {
+			AccessToken  string `json:"accessToken" doc:"Short-lived JWT access token"`
+			RefreshToken string `json:"refreshToken" doc:"Opaque refresh token"`
+			TokenType    string `json:"tokenType" example:"Bearer"`
+			ExpiresIn    int64  `json:"expiresIn" example:"900" doc:"Access token lifetime in seconds"`
+		}
+	}
+
 	type healthOutput struct {
 		Body struct {
 			Status string `json:"status" doc:"Current service status" example:"ok"`
@@ -136,20 +191,82 @@ func registerRoutes(api huma.API, cfg config.Config, deps Dependencies) {
 		return output, nil
 	})
 
-	type loginInput struct {
+	type refreshInput struct {
 		Body struct {
-			Email    string `json:"email" format:"email" maxLength:"320" doc:"User's email address" example:"joao@example.com"`
-			Password string `json:"password" minLength:"1" maxLength:"128" doc:"User's password" example:"senha-segura-123"`
+			RefreshToken string `json:"refreshToken" minLength:"1" doc:"Opaque refresh token"`
 		}
 	}
-	type loginOutput struct {
+
+	huma.Register(api, huma.Operation{
+		OperationID: "post-refresh",
+		Method:      http.MethodPost,
+		Path:        "/api/v1/auth/refresh",
+		Summary:     "Rotate a refresh token",
+		Tags:        []string{"Authentication"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusServiceUnavailable},
+	}, func(ctx context.Context, input *refreshInput) (*loginOutput, error) {
+		if deps.Authenticator == nil {
+			return nil, huma.Error503ServiceUnavailable("authentication service unavailable")
+		}
+		result, err := deps.Authenticator.Refresh(ctx, input.Body.RefreshToken)
+		if err != nil {
+			if errors.Is(err, auth.ErrInvalidRefresh) {
+				return nil, huma.Error401Unauthorized("invalid refresh token")
+			}
+			return nil, huma.Error500InternalServerError("could not refresh session")
+		}
+		output := &loginOutput{}
+		output.Body.AccessToken = result.AccessToken
+		output.Body.RefreshToken = result.RefreshToken
+		output.Body.TokenType = "Bearer"
+		output.Body.ExpiresIn = result.ExpiresIn
+		return output, nil
+	})
+
+	huma.Register(api, huma.Operation{
+		OperationID:   "post-logout",
+		Method:        http.MethodPost,
+		Path:          "/api/v1/auth/logout",
+		Summary:       "Revoke a refresh token family",
+		Tags:          []string{"Authentication"},
+		DefaultStatus: http.StatusNoContent,
+		Errors:        []int{http.StatusUnauthorized, http.StatusServiceUnavailable},
+	}, func(ctx context.Context, input *refreshInput) (*struct{}, error) {
+		if deps.Authenticator == nil {
+			return nil, huma.Error503ServiceUnavailable("authentication service unavailable")
+		}
+		if err := deps.Authenticator.Logout(ctx, input.Body.RefreshToken); err != nil {
+			return nil, huma.Error401Unauthorized("invalid refresh token")
+		}
+		return nil, nil
+	})
+
+	type currentUserOutput struct {
 		Body struct {
-			AccessToken  string `json:"accessToken" doc:"Short-lived JWT access token"`
-			RefreshToken string `json:"refreshToken" doc:"Opaque refresh token"`
-			TokenType    string `json:"tokenType" example:"Bearer"`
-			ExpiresIn    int64  `json:"expiresIn" example:"900" doc:"Access token lifetime in seconds"`
+			ID    string   `json:"id" format:"uuid"`
+			Email string   `json:"email" format:"email"`
+			Roles []string `json:"roles"`
 		}
 	}
+	huma.Register(api, huma.Operation{
+		OperationID: "get-current-user",
+		Method:      http.MethodGet,
+		Path:        "/api/v1/users/me",
+		Summary:     "Get the authenticated user",
+		Tags:        []string{"Users"},
+		Security:    []map[string][]string{{"bearerAuth": {}}},
+		Errors:      []int{http.StatusUnauthorized},
+	}, func(ctx context.Context, input *struct{}) (*currentUserOutput, error) {
+		claims, ok := ctx.Value(claimsContextKey{}).(*token.Claims)
+		if !ok || claims.Subject == "" {
+			return nil, huma.Error401Unauthorized("invalid token")
+		}
+		output := &currentUserOutput{}
+		output.Body.ID = claims.Subject
+		output.Body.Email = claims.Email
+		output.Body.Roles = claims.Roles
+		return output, nil
+	})
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "post-login",

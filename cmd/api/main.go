@@ -58,6 +58,7 @@ func main() {
 		Registerer:    registerService,
 		Authenticator: loginService,
 		JWKProvider:   signer,
+		TokenVerifier: signer,
 	})
 
 	errCh := make(chan error, 1)

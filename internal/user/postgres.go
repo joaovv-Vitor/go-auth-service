@@ -65,4 +65,28 @@ func (r *PostgresRepository) FindByEmail(ctx context.Context, email string) (Use
 	return found, nil
 }
 
+func (r *PostgresRepository) FindByID(ctx context.Context, id uuid.UUID) (User, error) {
+	var found User
+	err := r.db.QueryRow(ctx, `
+		SELECT id, name, email, password_hash, role, created_at, updated_at
+		FROM users
+		WHERE id = $1
+	`, id).Scan(
+		&found.ID,
+		&found.Name,
+		&found.Email,
+		&found.PasswordHash,
+		&found.Role,
+		&found.CreatedAt,
+		&found.UpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return User{}, ErrNotFound
+	}
+	if err != nil {
+		return User{}, fmt.Errorf("find user by id: %w", err)
+	}
+	return found, nil
+}
+
 var _ Repository = (*PostgresRepository)(nil)

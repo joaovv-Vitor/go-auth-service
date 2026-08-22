@@ -119,6 +119,26 @@ func (s *Signer) PublicJWK() JWK {
 	}
 }
 
+func (s *Signer) Validate(tokenString string) (*Claims, error) {
+	claims := &Claims{}
+	parsed, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (any, error) {
+		if t.Method != jwt.SigningMethodRS256 {
+			return nil, errors.New("unexpected JWT signing method")
+		}
+		if kid, ok := t.Header["kid"].(string); !ok || kid != s.kid {
+			return nil, errors.New("unexpected JWT key id")
+		}
+		return s.publicKey, nil
+	}, jwt.WithValidMethods([]string{"RS256"}), jwt.WithIssuer(s.issuer))
+	if err != nil || !parsed.Valid {
+		if err == nil {
+			err = errors.New("invalid JWT")
+		}
+		return nil, err
+	}
+	return claims, nil
+}
+
 func parsePrivateKey(data []byte) (*rsa.PrivateKey, error) {
 	block, _ := pem.Decode(data)
 	if block == nil {

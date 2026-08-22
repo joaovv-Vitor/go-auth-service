@@ -42,6 +42,8 @@ type LoginResponse struct {
 
 type Authenticator interface {
 	Login(ctx context.Context, input LoginInput) (LoginResponse, error)
+	Refresh(ctx context.Context, refreshToken string) (LoginResponse, error)
+	Logout(ctx context.Context, refreshToken string) error
 }
 
 var ErrInvalidCredentials = errors.New("invalid credentials")
@@ -49,6 +51,7 @@ var ErrInvalidCredentials = errors.New("invalid credentials")
 type LoginService struct {
 	users interface {
 		FindByEmail(context.Context, string) (user.User, error)
+		FindByID(context.Context, uuid.UUID) (user.User, error)
 	}
 	hasher interface {
 		Verify(string, string) (bool, error)
@@ -58,14 +61,19 @@ type LoginService struct {
 	}
 	sessions interface {
 		Create(context.Context, uuid.UUID, token.RefreshToken) error
+		Rotate(context.Context, string, time.Duration) (uuid.UUID, string, error)
+		Revoke(context.Context, string) error
 	}
 	accessTTL  time.Duration
 	refreshTTL time.Duration
 }
 
+var ErrInvalidRefresh = errors.New("invalid refresh token")
+
 func NewLoginService(
 	users interface {
 		FindByEmail(context.Context, string) (user.User, error)
+		FindByID(context.Context, uuid.UUID) (user.User, error)
 	},
 	hasher interface {
 		Verify(string, string) (bool, error)
@@ -75,6 +83,8 @@ func NewLoginService(
 	},
 	sessions interface {
 		Create(context.Context, uuid.UUID, token.RefreshToken) error
+		Rotate(context.Context, string, time.Duration) (uuid.UUID, string, error)
+		Revoke(context.Context, string) error
 	},
 	accessTTL time.Duration,
 	refreshTTL time.Duration,
@@ -117,6 +127,35 @@ func (s *LoginService) Login(ctx context.Context, input LoginInput) (LoginRespon
 		RefreshToken: refreshPlaintext,
 		ExpiresIn:    int64(s.accessTTL.Seconds()),
 	}, nil
+}
+
+func (s *LoginService) Refresh(ctx context.Context, refreshToken string) (LoginResponse, error) {
+	if s.users == nil || s.access == nil || s.sessions == nil {
+		return LoginResponse{}, ErrInvalidRefresh
+	}
+	userID, nextRefresh, err := s.sessions.Rotate(ctx, refreshToken, s.refreshTTL)
+	if err != nil {
+		return LoginResponse{}, ErrInvalidRefresh
+	}
+	found, err := s.users.FindByID(ctx, userID)
+	if err != nil {
+		return LoginResponse{}, fmt.Errorf("find refresh user: %w", err)
+	}
+	accessToken, err := s.access.Issue(found)
+	if err != nil {
+		return LoginResponse{}, fmt.Errorf("issue refreshed access token: %w", err)
+	}
+	return LoginResponse{AccessToken: accessToken, RefreshToken: nextRefresh, ExpiresIn: int64(s.accessTTL.Seconds())}, nil
+}
+
+func (s *LoginService) Logout(ctx context.Context, refreshToken string) error {
+	if s.sessions == nil {
+		return ErrInvalidRefresh
+	}
+	if err := s.sessions.Revoke(ctx, refreshToken); err != nil {
+		return ErrInvalidRefresh
+	}
+	return nil
 }
 
 type Service struct {
