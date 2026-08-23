@@ -1,0 +1,9 @@
+.git
+.github
+.env
+certs
+dist
+docs
+README.md
+Makefile
+compose.yaml

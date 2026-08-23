@@ -67,6 +67,36 @@ O workflow `.github/workflows/ci.yml` executa em pushes e pull requests:
 - `govulncheck`;
 - build dos binários e da imagem Docker.
 
+### Artefatos reproduzíveis
+
+Gere os binários Linux sem caminhos locais, metadados do Git ou dependência de
+CGO, acompanhados dos respectivos hashes SHA-256:
+
+```bash
+make checksums
+```
+
+Os arquivos são gravados em `dist/`. Para compilar duas vezes em diretórios
+isolados e confirmar que os resultados são idênticos:
+
+```bash
+make verify-reproducible
+```
+
+O alvo padrão é `linux/amd64`. Para outra arquitetura, informe-a explicitamente,
+por exemplo: `GOARCH=arm64 make checksums`.
+
+As imagens-base do Dockerfile são fixadas por digest. Com Docker Buildx, também
+é possível reconstruir a imagem duas vezes, normalizar os timestamps a partir do
+último commit e comparar os arquivos OCI:
+
+```bash
+make verify-container
+```
+
+O CI executa essas verificações e publica os binários e o arquivo `SHA256SUMS`
+como artefatos do workflow.
+
 ## Endpoints iniciais
 
 - `GET /health`
