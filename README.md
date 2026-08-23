@@ -6,6 +6,7 @@ Base inicial do Auth Service em Go.
 
 - [Design do serviço](docs/design.md)
 - [Plano de implementação da V1](docs/implementation-plan.md)
+- [Gerenciamento de chaves JWT](docs/jwt-key-management.md)
 
 ## Desenvolvimento
 
@@ -13,9 +14,14 @@ Base inicial do Auth Service em Go.
 2. Gere as chaves RSA de desenvolvimento:
 
 ```bash
-openssl genrsa -out certs/jwt.private.pem 2048
-openssl rsa -in certs/jwt.private.pem -pubout -out certs/jwt.public.pem
+mkdir -p certs
+umask 077
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out certs/jwt.private.pem
+openssl pkey -in certs/jwt.private.pem -pubout -out certs/jwt.public.pem
 ```
+
+Consulte [Gerenciamento de chaves JWT](docs/jwt-key-management.md) para validar
+o par e configurar permissões. Essas chaves são somente para desenvolvimento.
 
 3. Ajuste as variáveis conforme seu ambiente.
 4. Execute:
@@ -100,6 +106,9 @@ ser versionadas ou usadas em produção.
   fazem a aplicação falhar no startup.
 - Access tokens são emitidos para `JWT_AUDIENCE` (padrão: `auth-api`). Todo
   serviço consumidor deve validar `aud`, além de assinatura, `iss` e expiração.
+- A chave privada deve vir de um gerenciador de segredos e ser montada como
+  arquivo somente leitura. Consulte o guia de gerenciamento de chaves para a
+  configuração de produção e as limitações atuais de rotação.
 - CORS permanece desabilitado na V1, adequada a clientes server-to-server. Antes
   de permitir acesso direto de navegadores, configure uma allowlist explícita;
   nunca use origem curinga junto com credenciais.
