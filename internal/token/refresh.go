@@ -33,15 +33,15 @@ func NewRefreshToken(ttl time.Duration) (string, RefreshToken, error) {
 		return "", RefreshToken{}, fmt.Errorf("generate refresh token: %w", err)
 	}
 
-	return newRefreshToken(uuid.New(), secret, uuid.New(), ttl)
+	return newRefreshToken(uuid.New(), secret, uuid.New(), time.Now().UTC().Add(ttl))
 }
 
-func newRefreshToken(familyID uuid.UUID, secret []byte, id uuid.UUID, ttl time.Duration) (string, RefreshToken, error) {
+func newRefreshToken(familyID uuid.UUID, secret []byte, id uuid.UUID, expiresAt time.Time) (string, RefreshToken, error) {
 	return id.String() + "." + base64.RawURLEncoding.EncodeToString(secret), RefreshToken{
 		ID:        id,
 		FamilyID:  familyID,
 		TokenHash: hashRefreshSecret(secret),
-		ExpiresAt: time.Now().UTC().Add(ttl),
+		ExpiresAt: expiresAt,
 	}, nil
 }
 

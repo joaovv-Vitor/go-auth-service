@@ -43,3 +43,18 @@ func TestSignerIssuesRS256TokenAndJWKS(t *testing.T) {
 		t.Fatalf("unexpected validated claims: %+v", validated)
 	}
 }
+
+func TestSignerRejectsExpiredToken(t *testing.T) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+	signer := NewSigner(privateKey, &privateKey.PublicKey, "auth-service", -time.Minute)
+	tokenString, err := signer.Issue(user.User{ID: uuid.New(), Email: "joao@example.com", Role: user.RoleUser})
+	if err != nil {
+		t.Fatalf("issue expired token: %v", err)
+	}
+	if _, err := signer.Validate(tokenString); err == nil {
+		t.Fatal("expected expired token to be rejected")
+	}
+}

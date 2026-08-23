@@ -32,7 +32,7 @@ func (s *Store) Create(ctx context.Context, userID uuid.UUID, refresh RefreshTok
 	return nil
 }
 
-func (s *Store) Rotate(ctx context.Context, presented string, ttl time.Duration) (uuid.UUID, string, error) {
+func (s *Store) Rotate(ctx context.Context, presented string) (uuid.UUID, string, error) {
 	id, secret, err := ParseRefreshToken(presented)
 	if err != nil {
 		return uuid.Nil, "", err
@@ -79,7 +79,7 @@ func (s *Store) Rotate(ctx context.Context, presented string, ttl time.Duration)
 	if _, err := rand.Read(nextSecret); err != nil {
 		return uuid.Nil, "", fmt.Errorf("generate rotated refresh token: %w", err)
 	}
-	newPlaintext, next, err := newRefreshToken(current.FamilyID, nextSecret, uuid.New(), ttl)
+	newPlaintext, next, err := newRefreshToken(current.FamilyID, nextSecret, uuid.New(), current.ExpiresAt)
 	if err != nil {
 		return uuid.Nil, "", err
 	}

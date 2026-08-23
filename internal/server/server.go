@@ -44,6 +44,7 @@ func NewHandler(cfg config.Config, deps Dependencies) http.Handler {
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Recoverer)
+	router.Use(securityHeaders)
 	router.Use(requestLogger(slog.Default()))
 
 	apiConfig := huma.DefaultConfig("Go Auth Service", "0.1.0")
@@ -71,6 +72,18 @@ type Pinger interface {
 }
 
 type claimsContextKey struct{}
+
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		if strings.HasPrefix(r.URL.Path, "/api/v1/auth/") {
+			w.Header().Set("Cache-Control", "no-store")
+		}
+		next.ServeHTTP(w, r)
+	})
+}
 
 func authMiddleware(api huma.API, verifier interface {
 	Validate(string) (*token.Claims, error)

@@ -48,6 +48,10 @@ type Authenticator interface {
 
 var ErrInvalidCredentials = errors.New("invalid credentials")
 
+// dummyPasswordHash ensures that an unknown email still pays the Argon2id
+// verification cost, reducing the timing difference between invalid login cases.
+const dummyPasswordHash = "$argon2id$v=19$m=65536,t=3,p=2$MDEyMzQ1Njc4OWFiY2RlZg$v5FnH0LB688nOtSkw58qDHZiMLMeigiOibVDOAjeYxw"
+
 type LoginService struct {
 	users interface {
 		FindByEmail(context.Context, string) (user.User, error)
@@ -61,7 +65,7 @@ type LoginService struct {
 	}
 	sessions interface {
 		Create(context.Context, uuid.UUID, token.RefreshToken) error
-		Rotate(context.Context, string, time.Duration) (uuid.UUID, string, error)
+		Rotate(context.Context, string) (uuid.UUID, string, error)
 		Revoke(context.Context, string) error
 	}
 	accessTTL  time.Duration
@@ -83,7 +87,7 @@ func NewLoginService(
 	},
 	sessions interface {
 		Create(context.Context, uuid.UUID, token.RefreshToken) error
-		Rotate(context.Context, string, time.Duration) (uuid.UUID, string, error)
+		Rotate(context.Context, string) (uuid.UUID, string, error)
 		Revoke(context.Context, string) error
 	},
 	accessTTL time.Duration,
@@ -99,14 +103,17 @@ func (s *LoginService) Login(ctx context.Context, input LoginInput) (LoginRespon
 	}
 
 	found, err := s.users.FindByEmail(ctx, input.Email)
+	userExists := true
 	if err != nil {
 		if errors.Is(err, user.ErrNotFound) {
-			return LoginResponse{}, ErrInvalidCredentials
+			userExists = false
+			found.PasswordHash = dummyPasswordHash
+		} else {
+			return LoginResponse{}, fmt.Errorf("find login user: %w", err)
 		}
-		return LoginResponse{}, fmt.Errorf("find login user: %w", err)
 	}
 	valid, err := s.hasher.Verify(input.Password, found.PasswordHash)
-	if err != nil || !valid {
+	if err != nil || !valid || !userExists {
 		return LoginResponse{}, ErrInvalidCredentials
 	}
 
@@ -133,7 +140,7 @@ func (s *LoginService) Refresh(ctx context.Context, refreshToken string) (LoginR
 	if s.users == nil || s.access == nil || s.sessions == nil {
 		return LoginResponse{}, ErrInvalidRefresh
 	}
-	userID, nextRefresh, err := s.sessions.Rotate(ctx, refreshToken, s.refreshTTL)
+	userID, nextRefresh, err := s.sessions.Rotate(ctx, refreshToken)
 	if err != nil {
 		return LoginResponse{}, ErrInvalidRefresh
 	}

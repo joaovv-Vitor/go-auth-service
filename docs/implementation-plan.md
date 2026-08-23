@@ -234,7 +234,7 @@ Decisões de contrato a fechar na fase inicial:
 Tarefas:
 
 - [ ] confirmar política mínima de senha;
-- [ ] confirmar expiração absoluta da família de refresh tokens;
+- [x] confirmar expiração absoluta da família de refresh tokens;
 - [ ] decidir se haverá claim `aud` e definir seu valor;
 - [ ] escolher biblioteca JWT/JWK e ferramenta de migration;
 - [ ] definir se `/docs` e OpenAPI estarão habilitados em produção;
@@ -259,7 +259,7 @@ Tarefas:
 - [x] criar logger `slog` configurado por ambiente;
 - [x] adicionar middlewares Chi de request ID, recovery e logging estruturado;
 - [x] configurar Huma com metadados da API e security scheme `bearerAuth`;
-- [ ] padronizar o modelo de erro do Huma;
+- [x] padronizar o modelo de erro do Huma;
 - [x] manter shutdown gracioso e timeouts HTTP;
 - [x] adicionar testes do carregamento de configuração e do router básico.
 
@@ -353,7 +353,7 @@ Tarefas:
 - [x] responder `invalid_credentials` tanto para e-mail inexistente quanto para
   senha incorreta;
 - [x] testar claims, assinatura e ausência de dados sensíveis;
-- [ ] testar expiração do access token.
+- [x] testar expiração do access token.
 
 Critério de aceite:
 
@@ -374,7 +374,7 @@ Tarefas:
 - [x] expor a identidade do usuário a partir do `sub` e claims do JWT;
 - [x] registrar `GET /api/v1/users/me` com security scheme no OpenAPI;
 - [x] responder `401` para token ausente/inválido/expirado;
-- [ ] testar autorização no handler e o botão Authorize da documentação.
+- [x] testar autorização no handler e o botão Authorize da documentação.
 
 Critério de aceite:
 
@@ -414,7 +414,8 @@ Tarefas:
 - [x] validar o refresh token recebido;
 - [x] revogar todos os tokens ativos da família em transação;
 - [x] registrar `POST /api/v1/auth/logout`;
-- [ ] definir resposta segura para token desconhecido, expirado ou já revogado;
+- [x] definir resposta segura para token desconhecido, expirado ou já revogado
+  como `401 invalid_token`, sem ecoar o token;
 - [ ] testar que o access token atual continua válido até expirar;
 - [ ] testar que nenhum refresh da família funciona após logout.
 
@@ -436,7 +437,7 @@ Tarefas:
 - [ ] configurar limites de tamanho do corpo e timeouts;
 - [ ] configurar CORS por allowlist somente se o frontend acessar o serviço
   diretamente;
-- [ ] adicionar headers de segurança aplicáveis;
+- [x] adicionar headers de segurança aplicáveis;
 - [ ] adicionar métricas básicas apenas se houver infraestrutura para coletá-las;
 - [ ] documentar HTTPS obrigatório fora do ambiente local;
 - [ ] revisar mensagens para evitar enumeração de contas.
@@ -475,7 +476,7 @@ Tarefas:
 - [x] ajustar Dockerfile para cache de módulos com `go.sum`;
 - [x] manter imagem final mínima e usuário não-root;
 - [x] montar chaves por secret/volume, nunca por `COPY` no build;
-- [ ] adicionar healthcheck ao PostgreSQL e à API no Compose;
+- [x] adicionar healthcheck ao PostgreSQL e à API no Compose;
 - [x] definir como migrations rodam antes da aplicação;
 - [ ] adicionar pipeline de CI para build, testes, race quando viável, vet e
   vulnerabilidades;
