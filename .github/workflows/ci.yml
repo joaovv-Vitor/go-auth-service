@@ -66,10 +66,23 @@ jobs:
         run: go test -race -count=1 ./...
 
       - name: Scan for known vulnerabilities
-        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...
 
-      - name: Build binaries
-        run: go build -trimpath ./cmd/api ./cmd/migrate
+      - name: Verify reproducible binaries
+        run: make verify-reproducible
+
+      - name: Build release artifacts
+        run: make checksums
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-amd64-binaries-${{ github.sha }}
+          path: |
+            dist/auth-service
+            dist/migrate
+            dist/SHA256SUMS
+          if-no-files-found: error
 
   container:
     name: Container build
@@ -81,5 +94,5 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
-      - name: Build image
-        run: docker build --tag go-auth-service:${{ github.sha }} .
+      - name: Verify reproducible container image
+        run: make verify-container

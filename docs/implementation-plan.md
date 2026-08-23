@@ -485,7 +485,7 @@ Tarefas:
 - [x] adicionar pipeline de CI para build, testes, race, vet e vulnerabilidades;
 - [x] documentar geração de chaves apenas para desenvolvimento;
 - [x] documentar configuração de produção e rotação futura de chaves;
-- [ ] produzir binário e imagem reproduzíveis.
+- [x] produzir binário e imagem reproduzíveis.
 
 Critério de aceite:
 
