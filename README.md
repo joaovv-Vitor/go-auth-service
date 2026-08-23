@@ -31,6 +31,29 @@ Para desfazer apenas a última migration:
 go run ./cmd/migrate down 1
 ```
 
+### Testes
+
+A suíte unitária não depende de serviços externos:
+
+```bash
+go test ./...
+```
+
+Os testes de integração criam um schema temporário, aplicam as migrations e
+removem o schema ao terminar. Use exclusivamente uma instância PostgreSQL de
+teste:
+
+```bash
+docker compose up -d postgres
+TEST_DATABASE_URL='postgres://postgres:postgres@localhost:5432/auth_service?sslmode=disable' go test -count=1 ./...
+```
+
+Para validar também acessos concorrentes:
+
+```bash
+TEST_DATABASE_URL='postgres://postgres:postgres@localhost:5432/auth_service?sslmode=disable' go test -race -count=1 ./...
+```
+
 ## Endpoints iniciais
 
 - `GET /health`

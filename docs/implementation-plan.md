@@ -283,7 +283,7 @@ Tarefas:
 - [x] criar comando documentado para `migrate up/down`;
 - [x] fazer `/health` verificar o banco com timeout curto;
 - [x] encerrar o pool durante o shutdown;
-- [ ] adicionar teste de aplicação e rollback das migrations em banco limpo.
+- [x] adicionar teste de aplicação e rollback das migrations em banco limpo.
 
 Critério de aceite:
 
@@ -328,7 +328,7 @@ Tarefas:
 - [x] garantir role `USER` independentemente do payload;
 - [x] registrar `POST /api/v1/auth/register` no Huma;
 - [x] não retornar nem logar `password_hash`;
-- [ ] adicionar testes unitários, de repository e HTTP.
+- [x] adicionar testes unitários, de repository e HTTP.
 
 Critério de aceite:
 
@@ -397,7 +397,7 @@ Tarefas:
 - [x] confirmar toda a rotação em uma única transação;
 - [x] detectar reutilização e revogar a família inteira;
 - [x] registrar `POST /api/v1/auth/refresh`;
-- [ ] testar duas requisições concorrentes usando o mesmo token.
+- [x] testar duas requisições concorrentes usando o mesmo token.
 
 Critério de aceite:
 
@@ -416,8 +416,8 @@ Tarefas:
 - [x] registrar `POST /api/v1/auth/logout`;
 - [x] definir resposta segura para token desconhecido, expirado ou já revogado
   como `401 invalid_token`, sem ecoar o token;
-- [ ] testar que o access token atual continua válido até expirar;
-- [ ] testar que nenhum refresh da família funciona após logout.
+- [x] testar que o access token atual continua válido até expirar;
+- [x] testar que nenhum refresh da família funciona após logout.
 
 Critério de aceite:
 
@@ -452,13 +452,13 @@ Critério de aceite:
 Tarefas:
 
 - [ ] cobrir services com testes de unidade e relógio controlável;
-- [ ] cobrir repositories contra PostgreSQL real;
-- [ ] cobrir handlers com `httptest` e Huma;
+- [x] cobrir repositories contra PostgreSQL real;
+- [x] cobrir handlers com `httptest` e Huma;
 - [ ] executar o fluxo completo da seção 29 do design;
 - [ ] testar rollback quando uma rotação falha no meio da transação;
-- [ ] testar concorrência e executar `go test -race ./...`;
+- [x] testar concorrência e executar `go test -race ./...`;
 - [ ] validar `go test`, `go vet`, formatação e análise de vulnerabilidades;
-- [ ] validar que OpenAPI inclui contratos, erros e autenticação;
+- [x] validar que OpenAPI inclui contratos, erros e autenticação;
 - [ ] criar fixtures sem credenciais reais.
 
 Critério de aceite:
