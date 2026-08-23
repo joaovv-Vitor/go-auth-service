@@ -177,7 +177,7 @@ func TestLogoutDoesNotInvalidateAlreadyIssuedAccessToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("generate signing key: %v", err)
 	}
-	signer := NewSigner(privateKey, &privateKey.PublicKey, "integration-auth-service", 15*time.Minute)
+	signer := NewSigner(privateKey, &privateKey.PublicKey, "integration-auth-service", "auth-api", 15*time.Minute)
 	accessToken, err := signer.Issue(user.User{ID: userID, Email: "stateless-access@example.com", Role: user.RoleUser})
 	if err != nil {
 		t.Fatalf("issue access token: %v", err)

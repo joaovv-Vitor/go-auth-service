@@ -30,6 +30,9 @@ func TestLoadUsesDefaults(t *testing.T) {
 		t.Fatalf("unexpected Argon2id defaults: memory=%d iterations=%d parallelism=%d",
 			cfg.Argon2MemoryKiB, cfg.Argon2Iterations, cfg.Argon2Parallelism)
 	}
+	if cfg.JWTAudience != "auth-api" {
+		t.Fatalf("expected default JWT audience auth-api, got %q", cfg.JWTAudience)
+	}
 }
 
 func TestLoadDisablesAPIDocsByDefaultInProduction(t *testing.T) {

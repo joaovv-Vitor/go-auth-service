@@ -26,11 +26,12 @@ type Signer struct {
 	privateKey *rsa.PrivateKey
 	publicKey  *rsa.PublicKey
 	issuer     string
+	audience   string
 	ttl        time.Duration
 	kid        string
 }
 
-func LoadSigner(privatePath, publicPath, issuer string, ttl time.Duration) (*Signer, error) {
+func LoadSigner(privatePath, publicPath, issuer, audience string, ttl time.Duration) (*Signer, error) {
 	privateBytes, err := os.ReadFile(privatePath)
 	if err != nil {
 		return nil, fmt.Errorf("read JWT private key: %w", err)
@@ -54,18 +55,19 @@ func LoadSigner(privatePath, publicPath, issuer string, ttl time.Duration) (*Sig
 	if privateKey.N.BitLen() < 2048 {
 		return nil, errors.New("JWT RSA key must be at least 2048 bits")
 	}
-	if issuer == "" || ttl <= 0 {
-		return nil, errors.New("JWT issuer and TTL are required")
+	if issuer == "" || audience == "" || ttl <= 0 {
+		return nil, errors.New("JWT issuer, audience and TTL are required")
 	}
 
-	return NewSigner(privateKey, publicKey, issuer, ttl), nil
+	return NewSigner(privateKey, publicKey, issuer, audience, ttl), nil
 }
 
-func NewSigner(privateKey *rsa.PrivateKey, publicKey *rsa.PublicKey, issuer string, ttl time.Duration) *Signer {
+func NewSigner(privateKey *rsa.PrivateKey, publicKey *rsa.PublicKey, issuer, audience string, ttl time.Duration) *Signer {
 	return &Signer{
 		privateKey: privateKey,
 		publicKey:  publicKey,
 		issuer:     issuer,
+		audience:   audience,
 		ttl:        ttl,
 		kid:        keyID(publicKey),
 	}
@@ -79,6 +81,7 @@ func (s *Signer) Issue(user user.User) (string, error) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    s.issuer,
 			Subject:   user.ID.String(),
+			Audience:  jwt.ClaimStrings{s.audience},
 			ID:        uuid.NewString(),
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.ttl)),
@@ -129,7 +132,7 @@ func (s *Signer) Validate(tokenString string) (*Claims, error) {
 			return nil, errors.New("unexpected JWT key id")
 		}
 		return s.publicKey, nil
-	}, jwt.WithValidMethods([]string{"RS256"}), jwt.WithIssuer(s.issuer))
+	}, jwt.WithValidMethods([]string{"RS256"}), jwt.WithIssuer(s.issuer), jwt.WithAudience(s.audience))
 	if err != nil || !parsed.Valid {
 		if err == nil {
 			err = errors.New("invalid JWT")

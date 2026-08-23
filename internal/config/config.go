@@ -19,6 +19,7 @@ type Config struct {
 	DatabaseURL         string
 	APIDocsEnabled      bool
 	JWTIssuer           string
+	JWTAudience         string
 	JWTPublicKeyPath    string
 	JWTPrivateKeyPath   string
 	AccessTokenTTL      time.Duration
@@ -86,6 +87,7 @@ func Load() (Config, error) {
 		DatabaseURL:         getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/auth_service?sslmode=disable"),
 		APIDocsEnabled:      apiDocsEnabled,
 		JWTIssuer:           getEnv("JWT_ISSUER", "auth-service"),
+		JWTAudience:         getEnv("JWT_AUDIENCE", "auth-api"),
 		JWTPublicKeyPath:    getEnv("JWT_PUBLIC_KEY_PATH", "certs/jwt.public.pem"),
 		JWTPrivateKeyPath:   getEnv("JWT_PRIVATE_KEY_PATH", "certs/jwt.private.pem"),
 		AccessTokenTTL:      accessTokenTTL,

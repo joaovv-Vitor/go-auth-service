@@ -44,7 +44,7 @@ func main() {
 	}
 	pingCancel()
 
-	signer, err := token.LoadSigner(cfg.JWTPrivateKeyPath, cfg.JWTPublicKeyPath, cfg.JWTIssuer, cfg.AccessTokenTTL)
+	signer, err := token.LoadSigner(cfg.JWTPrivateKeyPath, cfg.JWTPublicKeyPath, cfg.JWTIssuer, cfg.JWTAudience, cfg.AccessTokenTTL)
 	if err != nil {
 		log.Fatalf("load JWT keys: %v", err)
 	}

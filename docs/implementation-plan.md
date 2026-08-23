@@ -235,12 +235,14 @@ Tarefas:
 
 - [x] confirmar política de senha entre 12 e 128 bytes;
 - [x] confirmar expiração absoluta da família de refresh tokens;
-- [ ] decidir se haverá claim `aud` e definir seu valor;
-- [ ] escolher biblioteca JWT/JWK e ferramenta de migration;
+- [x] exigir claim `aud`, configurável por `JWT_AUDIENCE` e com valor padrão
+  `auth-api`;
+- [x] usar `golang-jwt/jwt/v5`, serialização JWK RSA local coberta por testes e
+  `golang-migrate` com driver pgx;
 - [x] definir `/docs`, OpenAPI e schemas como desabilitados por padrão em
   produção, com opt-in explícito;
-- [ ] formalizar schemas Huma de request, response e erro;
-- [ ] criar exemplos válidos na documentação Swagger/OpenAPI.
+- [x] formalizar schemas Huma de request, response e erro;
+- [x] criar exemplos válidos na documentação Swagger/OpenAPI.
 
 Critério de aceite:
 
@@ -552,7 +554,7 @@ A V1 estará pronta quando:
 - [x] logout impede qualquer nova renovação da sessão;
 - [x] erros são consistentes e não permitem enumeração óbvia de usuários;
 - [x] logs são estruturados e não contêm segredos;
-- [ ] Swagger/OpenAPI descreve todas as rotas, schemas e autenticação;
+- [x] Swagger/OpenAPI descreve todas as rotas, schemas e autenticação;
 - [ ] migrations, testes, Docker e instruções funcionam em checkout limpo;
 - [x] todas as condições da seção 29 do design foram demonstradas.
 

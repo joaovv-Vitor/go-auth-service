@@ -25,7 +25,7 @@ func TestCompleteV1AuthenticationFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("generate signing key: %v", err)
 	}
-	signer := token.NewSigner(privateKey, &privateKey.PublicKey, "integration-auth-service", 15*time.Minute)
+	signer := token.NewSigner(privateKey, &privateKey.PublicKey, "integration-auth-service", "auth-api", 15*time.Minute)
 	users := user.NewPostgresRepository(database.Pool)
 	sessions := token.NewStore(database.Pool)
 	handler := NewHandler(config.Config{AppEnv: "test"}, Dependencies{
@@ -122,7 +122,7 @@ func validateAccessTokenFromHTTPJWKS(t *testing.T, handler http.Handler, accessT
 	publicKey := &rsa.PublicKey{N: new(big.Int).SetBytes(modulus), E: exponent}
 	parsed, err := jwt.Parse(accessToken, func(parsed *jwt.Token) (any, error) {
 		return publicKey, nil
-	}, jwt.WithValidMethods([]string{"RS256"}), jwt.WithIssuer("integration-auth-service"))
+	}, jwt.WithValidMethods([]string{"RS256"}), jwt.WithIssuer("integration-auth-service"), jwt.WithAudience("auth-api"))
 	if err != nil || !parsed.Valid {
 		t.Fatalf("validate access token using HTTP JWKS: valid=%t err=%v", parsed != nil && parsed.Valid, err)
 	}

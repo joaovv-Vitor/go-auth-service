@@ -103,6 +103,7 @@ func TestOpenAPIDocumentsBearerAuthentication(t *testing.T) {
 				Scheme       string `json:"scheme"`
 				BearerFormat string `json:"bearerFormat"`
 			} `json:"securitySchemes"`
+			Schemas map[string]json.RawMessage `json:"schemas"`
 		} `json:"components"`
 		Paths map[string]map[string]struct {
 			Security []map[string][]string `json:"security"`
@@ -121,6 +122,29 @@ func TestOpenAPIDocumentsBearerAuthentication(t *testing.T) {
 	}
 	if _, ok := operation.Security[0]["bearerAuth"]; !ok {
 		t.Fatalf("expected bearerAuth operation security: %+v", operation.Security)
+	}
+
+	expectedOperations := map[string]string{
+		"/health":                http.MethodGet,
+		"/.well-known/jwks.json": http.MethodGet,
+		"/api/v1/auth/register":  http.MethodPost,
+		"/api/v1/auth/login":     http.MethodPost,
+		"/api/v1/auth/refresh":   http.MethodPost,
+		"/api/v1/auth/logout":    http.MethodPost,
+		"/api/v1/users/me":       http.MethodGet,
+	}
+	for path, method := range expectedOperations {
+		if _, ok := document.Paths[path][strings.ToLower(method)]; !ok {
+			t.Errorf("expected OpenAPI operation %s %s", method, path)
+		}
+	}
+	for _, schema := range []string{
+		"ApiError", "ErrorDetail", "LoginInputBody", "LoginOutputBody",
+		"RefreshInputBody", "RegisterInputBody", "RegisterOutputBody", "CurrentUserOutputBody", "JWK",
+	} {
+		if _, ok := document.Components.Schemas[schema]; !ok {
+			t.Errorf("expected OpenAPI schema %s", schema)
+		}
 	}
 }
 

@@ -91,6 +91,8 @@ ser versionadas ou usadas em produção.
 - Os custos de senha são configurados por `ARGON2_MEMORY_KIB`,
   `ARGON2_ITERATIONS` e `ARGON2_PARALLELISM`. Valores fora dos limites seguros
   fazem a aplicação falhar no startup.
+- Access tokens são emitidos para `JWT_AUDIENCE` (padrão: `auth-api`). Todo
+  serviço consumidor deve validar `aud`, além de assinatura, `iss` e expiração.
 - CORS permanece desabilitado na V1, adequada a clientes server-to-server. Antes
   de permitir acesso direto de navegadores, configure uma allowlist explícita;
   nunca use origem curinga junto com credenciais.

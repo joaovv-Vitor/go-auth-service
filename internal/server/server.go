@@ -176,8 +176,8 @@ func registerRoutes(api huma.API, cfg config.Config, deps Dependencies) {
 	}
 	type loginOutput struct {
 		Body struct {
-			AccessToken  string `json:"accessToken" doc:"Short-lived JWT access token"`
-			RefreshToken string `json:"refreshToken" doc:"Opaque refresh token"`
+			AccessToken  string `json:"accessToken" doc:"Short-lived JWT access token" example:"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.example.signature"`
+			RefreshToken string `json:"refreshToken" doc:"Opaque refresh token" example:"550e8400-e29b-41d4-a716-446655440000.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"`
 			TokenType    string `json:"tokenType" example:"Bearer"`
 			ExpiresIn    int64  `json:"expiresIn" example:"900" doc:"Access token lifetime in seconds"`
 		}
@@ -215,7 +215,7 @@ func registerRoutes(api huma.API, cfg config.Config, deps Dependencies) {
 
 	type refreshInput struct {
 		Body struct {
-			RefreshToken string `json:"refreshToken" minLength:"1" doc:"Opaque refresh token"`
+			RefreshToken string `json:"refreshToken" minLength:"1" doc:"Opaque refresh token" example:"550e8400-e29b-41d4-a716-446655440000.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"`
 		}
 	}
 
@@ -267,8 +267,8 @@ func registerRoutes(api huma.API, cfg config.Config, deps Dependencies) {
 
 	type currentUserOutput struct {
 		Body struct {
-			ID    string   `json:"id" format:"uuid"`
-			Email string   `json:"email" format:"email"`
+			ID    string   `json:"id" format:"uuid" example:"550e8400-e29b-41d4-a716-446655440000"`
+			Email string   `json:"email" format:"email" example:"joao@example.com"`
 			Roles []string `json:"roles"`
 		}
 	}
@@ -332,9 +332,9 @@ func registerRoutes(api huma.API, cfg config.Config, deps Dependencies) {
 	}
 	type registerOutput struct {
 		Body struct {
-			ID    string   `json:"id" format:"uuid" doc:"User identifier"`
-			Name  string   `json:"name"`
-			Email string   `json:"email" format:"email"`
+			ID    string   `json:"id" format:"uuid" doc:"User identifier" example:"550e8400-e29b-41d4-a716-446655440000"`
+			Name  string   `json:"name" example:"João"`
+			Email string   `json:"email" format:"email" example:"joao@example.com"`
 			Roles []string `json:"roles"`
 		}
 	}
