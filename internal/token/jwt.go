@@ -142,12 +142,15 @@ func (s *Signer) Validate(tokenString string) (*Claims, error) {
 			return nil, errors.New("unexpected JWT key id")
 		}
 		return s.publicKey, nil
-	}, jwt.WithValidMethods([]string{"RS256"}), jwt.WithIssuer(s.issuer), jwt.WithAudience(s.audience), jwt.WithTimeFunc(s.clock.Now))
+	}, jwt.WithValidMethods([]string{"RS256"}), jwt.WithIssuer(s.issuer), jwt.WithAudience(s.audience), jwt.WithExpirationRequired(), jwt.WithIssuedAt(), jwt.WithTimeFunc(s.clock.Now))
 	if err != nil || !parsed.Valid {
 		if err == nil {
 			err = errors.New("invalid JWT")
 		}
 		return nil, err
+	}
+	if claims.Subject == "" || claims.Email == "" || len(claims.Roles) == 0 || claims.IssuedAt == nil {
+		return nil, errors.New("JWT is missing required claims")
 	}
 	return claims, nil
 }
