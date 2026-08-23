@@ -145,3 +145,48 @@ func TestSignerRejectsUnexpectedIssuerAlgorithmAndKeyID(t *testing.T) {
 		t.Fatal("expected token with another algorithm to be rejected")
 	}
 }
+
+func TestSignerRejectsMissingRequiredClaims(t *testing.T) {
+	privateKey := testsupport.RSAKey(t)
+	now := time.Date(2030, time.January, 2, 3, 4, 5, 0, time.UTC)
+	signer := NewSignerWithClock(privateKey, &privateKey.PublicKey, "auth-service", "auth-api", time.Minute, authclock.Func(func() time.Time { return now }))
+	valid := Claims{
+		Email: testsupport.FixtureEmail,
+		Roles: []string{user.RoleUser},
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    "auth-service",
+			Subject:   uuid.NewString(),
+			Audience:  jwt.ClaimStrings{"auth-api"},
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(time.Minute)),
+		},
+	}
+
+	tests := []struct {
+		name   string
+		mutate func(*Claims)
+	}{
+		{name: "expiration", mutate: func(claims *Claims) { claims.ExpiresAt = nil }},
+		{name: "issued at", mutate: func(claims *Claims) { claims.IssuedAt = nil }},
+		{name: "subject", mutate: func(claims *Claims) { claims.Subject = "" }},
+		{name: "email", mutate: func(claims *Claims) { claims.Email = "" }},
+		{name: "roles", mutate: func(claims *Claims) { claims.Roles = nil }},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			claims := valid
+			claims.Roles = slices.Clone(valid.Roles)
+			tt.mutate(&claims)
+			unsigned := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+			unsigned.Header["kid"] = signer.KeyID()
+			tokenString, err := unsigned.SignedString(privateKey)
+			if err != nil {
+				t.Fatalf("sign token: %v", err)
+			}
+			if _, err := signer.Validate(tokenString); err == nil {
+				t.Fatalf("expected token without %s to be rejected", tt.name)
+			}
+		})
+	}
+}

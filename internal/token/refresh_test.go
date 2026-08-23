@@ -64,7 +64,25 @@ func TestRefreshTokenUsesControlledClockForExpiration(t *testing.T) {
 }
 
 func TestParseRefreshTokenRejectsMalformedInput(t *testing.T) {
-	if _, _, err := ParseRefreshToken("not-a-refresh-token"); err == nil {
-		t.Fatal("expected malformed refresh token to be rejected")
+	tests := []string{
+		"",
+		"not-a-refresh-token",
+		uuid.NewString() + ".",
+		uuid.NewString() + ".not-base64!",
+		uuid.NewString() + "." + "c2hvcnQ",
+		uuid.NewString() + "." + "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.extra",
+	}
+	for _, value := range tests {
+		if _, _, err := ParseRefreshToken(value); err == nil {
+			t.Fatalf("expected malformed refresh token %q to be rejected", value)
+		}
+	}
+}
+
+func TestNewRefreshTokenRejectsNonPositiveTTL(t *testing.T) {
+	for _, ttl := range []time.Duration{0, -time.Second} {
+		if _, _, err := NewRefreshToken(ttl); err == nil {
+			t.Fatalf("expected TTL %s to be rejected", ttl)
+		}
 	}
 }

@@ -308,7 +308,7 @@ Tarefas:
 - [x] implementar geração de refresh token com CSPRNG;
 - [x] implementar hash e comparação constante do refresh token;
 - [x] preencher o endpoint JWKS com a chave RSA pública real;
-- [ ] criar testes unitários para todos os casos criptográficos e de expiração.
+- [x] criar testes unitários para todos os casos criptográficos e de expiração.
 
 Critério de aceite:
 
