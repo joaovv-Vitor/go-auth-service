@@ -233,11 +233,12 @@ Decisões de contrato a fechar na fase inicial:
 
 Tarefas:
 
-- [ ] confirmar política mínima de senha;
+- [x] confirmar política de senha entre 12 e 128 bytes;
 - [x] confirmar expiração absoluta da família de refresh tokens;
 - [ ] decidir se haverá claim `aud` e definir seu valor;
 - [ ] escolher biblioteca JWT/JWK e ferramenta de migration;
-- [ ] definir se `/docs` e OpenAPI estarão habilitados em produção;
+- [x] definir `/docs`, OpenAPI e schemas como desabilitados por padrão em
+  produção, com opt-in explícito;
 - [ ] formalizar schemas Huma de request, response e erro;
 - [ ] criar exemplos válidos na documentação Swagger/OpenAPI.
 
@@ -426,21 +427,22 @@ Critério de aceite:
 
 ### Fase 9 — Observabilidade e hardening HTTP
 
-Status: em andamento. Logging estruturado e limites de corpo fornecidos pelo
-Huma já estão ativos; o hardening restante ainda será revisado.
+Status: concluída para o escopo da V1. Logging estruturado, limites de corpo,
+headers de segurança e defaults seguros de produção estão ativos e testados.
 
 Tarefas:
 
 - [x] emitir logs JSON com timestamp, level, request ID, método, path, status e
   duração;
-- [ ] revisar redaction de headers, corpos e erros;
-- [ ] configurar limites de tamanho do corpo e timeouts;
-- [ ] configurar CORS por allowlist somente se o frontend acessar o serviço
-  diretamente;
+- [x] revisar redaction de headers, corpos e erros;
+- [x] configurar limites de tamanho do corpo e timeouts;
+- [x] manter CORS desabilitado enquanto não houver acesso direto por frontend e
+  documentar allowlist obrigatória para essa evolução;
 - [x] adicionar headers de segurança aplicáveis;
-- [ ] adicionar métricas básicas apenas se houver infraestrutura para coletá-las;
-- [ ] documentar HTTPS obrigatório fora do ambiente local;
-- [ ] revisar mensagens para evitar enumeração de contas.
+- [x] não adicionar métricas na V1 enquanto não houver infraestrutura para
+  coletá-las;
+- [x] documentar HTTPS obrigatório fora do ambiente local;
+- [x] revisar mensagens para evitar enumeração de contas.
 
 Critério de aceite:
 
@@ -548,8 +550,8 @@ A V1 estará pronta quando:
 - [x] refresh rotaciona o token de forma atômica;
 - [x] reutilização de refresh token é detectada e revoga a família;
 - [x] logout impede qualquer nova renovação da sessão;
-- [ ] erros são consistentes e não permitem enumeração óbvia de usuários;
-- [ ] logs são estruturados e não contêm segredos;
+- [x] erros são consistentes e não permitem enumeração óbvia de usuários;
+- [x] logs são estruturados e não contêm segredos;
 - [ ] Swagger/OpenAPI descreve todas as rotas, schemas e autenticação;
 - [ ] migrations, testes, Docker e instruções funcionam em checkout limpo;
 - [x] todas as condições da seção 29 do design foram demonstradas.

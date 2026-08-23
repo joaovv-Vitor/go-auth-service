@@ -48,6 +48,11 @@ func NewHandler(cfg config.Config, deps Dependencies) http.Handler {
 	router.Use(requestLogger(slog.Default()))
 
 	apiConfig := huma.DefaultConfig("Go Auth Service", "0.1.0")
+	if !cfg.APIDocsEnabled {
+		apiConfig.OpenAPIPath = ""
+		apiConfig.DocsPath = ""
+		apiConfig.SchemasPath = ""
+	}
 	apiConfig.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
 		"bearerAuth": {
 			Type:         "http",
@@ -159,6 +164,10 @@ func responseStatus(status int) int {
 }
 
 func registerRoutes(api huma.API, cfg config.Config, deps Dependencies) {
+	maxRequestBodyBytes := cfg.MaxRequestBodyBytes
+	if maxRequestBodyBytes <= 0 {
+		maxRequestBodyBytes = 64 * 1024
+	}
 	type loginInput struct {
 		Body struct {
 			Email    string `json:"email" format:"email" maxLength:"320" doc:"User's email address" example:"joao@example.com"`
@@ -211,12 +220,13 @@ func registerRoutes(api huma.API, cfg config.Config, deps Dependencies) {
 	}
 
 	huma.Register(api, huma.Operation{
-		OperationID: "post-refresh",
-		Method:      http.MethodPost,
-		Path:        "/api/v1/auth/refresh",
-		Summary:     "Rotate a refresh token",
-		Tags:        []string{"Authentication"},
-		Errors:      []int{http.StatusUnauthorized, http.StatusServiceUnavailable},
+		OperationID:  "post-refresh",
+		Method:       http.MethodPost,
+		Path:         "/api/v1/auth/refresh",
+		Summary:      "Rotate a refresh token",
+		Tags:         []string{"Authentication"},
+		MaxBodyBytes: maxRequestBodyBytes,
+		Errors:       []int{http.StatusUnauthorized, http.StatusServiceUnavailable},
 	}, func(ctx context.Context, input *refreshInput) (*loginOutput, error) {
 		if deps.Authenticator == nil {
 			return nil, huma.Error503ServiceUnavailable("authentication service unavailable")
@@ -242,6 +252,7 @@ func registerRoutes(api huma.API, cfg config.Config, deps Dependencies) {
 		Path:          "/api/v1/auth/logout",
 		Summary:       "Revoke a refresh token family",
 		Tags:          []string{"Authentication"},
+		MaxBodyBytes:  maxRequestBodyBytes,
 		DefaultStatus: http.StatusNoContent,
 		Errors:        []int{http.StatusUnauthorized, http.StatusServiceUnavailable},
 	}, func(ctx context.Context, input *refreshInput) (*struct{}, error) {
@@ -287,6 +298,7 @@ func registerRoutes(api huma.API, cfg config.Config, deps Dependencies) {
 		Path:          "/api/v1/auth/login",
 		Summary:       "Authenticate a user",
 		Tags:          []string{"Authentication"},
+		MaxBodyBytes:  maxRequestBodyBytes,
 		DefaultStatus: http.StatusOK,
 		Errors:        []int{http.StatusUnauthorized, http.StatusServiceUnavailable},
 	}, func(ctx context.Context, input *loginInput) (*loginOutput, error) {
@@ -333,6 +345,7 @@ func registerRoutes(api huma.API, cfg config.Config, deps Dependencies) {
 		Path:          "/api/v1/auth/register",
 		Summary:       "Register a user",
 		Tags:          []string{"Authentication"},
+		MaxBodyBytes:  maxRequestBodyBytes,
 		DefaultStatus: http.StatusCreated,
 		Errors:        []int{http.StatusBadRequest, http.StatusConflict, http.StatusServiceUnavailable},
 	}, func(ctx context.Context, input *registerInput) (*registerOutput, error) {

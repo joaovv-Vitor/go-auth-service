@@ -1,10 +1,12 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -26,11 +28,12 @@ type verifierStub struct {
 }
 
 type authenticatorStub struct {
+	loginErr  error
 	logoutErr error
 }
 
-func (authenticatorStub) Login(context.Context, auth.LoginInput) (auth.LoginResponse, error) {
-	return auth.LoginResponse{}, errors.New("not implemented")
+func (s authenticatorStub) Login(context.Context, auth.LoginInput) (auth.LoginResponse, error) {
+	return auth.LoginResponse{}, s.loginErr
 }
 
 func (authenticatorStub) Refresh(context.Context, string) (auth.LoginResponse, error) {
@@ -79,7 +82,7 @@ func TestHealthEndpoint(t *testing.T) {
 }
 
 func TestOpenAPIAndJWKSAndDocsAreAvailable(t *testing.T) {
-	handler := NewHandler(config.Config{AppEnv: "test"}, Dependencies{})
+	handler := NewHandler(config.Config{AppEnv: "test", APIDocsEnabled: true}, Dependencies{})
 
 	for _, path := range []string{"/openapi.json", "/docs", "/.well-known/jwks.json"} {
 		response := performRequest(t, handler, http.MethodGet, path, "", nil)
@@ -91,7 +94,7 @@ func TestOpenAPIAndJWKSAndDocsAreAvailable(t *testing.T) {
 }
 
 func TestOpenAPIDocumentsBearerAuthentication(t *testing.T) {
-	response := performRequest(t, NewHandler(config.Config{AppEnv: "test"}, Dependencies{}), http.MethodGet, "/openapi.json", "", nil)
+	response := performRequest(t, NewHandler(config.Config{AppEnv: "test", APIDocsEnabled: true}, Dependencies{}), http.MethodGet, "/openapi.json", "", nil)
 
 	var document struct {
 		Components struct {
@@ -118,6 +121,65 @@ func TestOpenAPIDocumentsBearerAuthentication(t *testing.T) {
 	}
 	if _, ok := operation.Security[0]["bearerAuth"]; !ok {
 		t.Fatalf("expected bearerAuth operation security: %+v", operation.Security)
+	}
+}
+
+func TestAPIDocumentationCanBeDisabled(t *testing.T) {
+	handler := NewHandler(config.Config{AppEnv: "production", APIDocsEnabled: false}, Dependencies{})
+	for _, path := range []string{"/openapi.json", "/openapi.yaml", "/docs", "/schemas/anything.json"} {
+		response := performRequest(t, handler, http.MethodGet, path, "", nil)
+		if response.Code != http.StatusNotFound {
+			t.Fatalf("expected disabled path %s to return 404, got %d", path, response.Code)
+		}
+	}
+	response := performRequest(t, handler, http.MethodGet, "/health", "", nil)
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected health to remain available, got %d", response.Code)
+	}
+}
+
+func TestAuthenticationBodyLimitReturnsRequestEntityTooLarge(t *testing.T) {
+	handler := NewHandler(config.Config{AppEnv: "test", MaxRequestBodyBytes: 64}, Dependencies{Registerer: registererStub{}})
+	body := `{"name":"João","email":"joao@example.com","password":"` + strings.Repeat("s", 128) + `"}`
+	response := performRequest(t, handler, http.MethodPost, "/api/v1/auth/register", body,
+		map[string]string{"Content-Type": "application/json"})
+	if response.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("expected status 413, got %d: %s", response.Code, response.Body.String())
+	}
+}
+
+func TestRequestLoggerDoesNotRecordSecrets(t *testing.T) {
+	var output bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&output, nil))
+	handler := requestLogger(logger)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	secret := "never-log-this-secret"
+	response := performRequest(t, handler, http.MethodPost, "/api/v1/auth/login?refreshToken="+secret,
+		`{"password":"`+secret+`"}`,
+		map[string]string{"Authorization": "Bearer " + secret})
+	if response.Code != http.StatusUnauthorized {
+		t.Fatalf("expected status 401, got %d", response.Code)
+	}
+	if strings.Contains(output.String(), secret) || strings.Contains(output.String(), "Authorization") {
+		t.Fatalf("request log leaked sensitive data: %s", output.String())
+	}
+}
+
+func TestInvalidLoginResponsesDoNotEnumerateUsers(t *testing.T) {
+	handler := NewHandler(config.Config{AppEnv: "test"}, Dependencies{
+		Authenticator: authenticatorStub{loginErr: auth.ErrInvalidCredentials},
+	})
+	headers := map[string]string{"Content-Type": "application/json"}
+	missing := performRequest(t, handler, http.MethodPost, "/api/v1/auth/login",
+		`{"email":"missing@example.com","password":"candidate-password"}`, headers)
+	wrongPassword := performRequest(t, handler, http.MethodPost, "/api/v1/auth/login",
+		`{"email":"existing@example.com","password":"wrong-password"}`, headers)
+	if missing.Code != http.StatusUnauthorized || wrongPassword.Code != http.StatusUnauthorized {
+		t.Fatalf("expected both invalid logins to return 401, got %d and %d", missing.Code, wrongPassword.Code)
+	}
+	if missing.Body.String() != wrongPassword.Body.String() {
+		t.Fatalf("invalid login responses differ: missing=%s wrong=%s", missing.Body.String(), wrongPassword.Body.String())
 	}
 }
 

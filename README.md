@@ -78,3 +78,19 @@ docker compose up --build
 
 As chaves são montadas no container somente para desenvolvimento e não devem
 ser versionadas ou usadas em produção.
+
+## Produção
+
+- HTTPS é obrigatório fora do ambiente local e deve ser terminado por um proxy
+  reverso ou load balancer confiável.
+- `/docs`, `/openapi.*` e `/schemas` ficam desabilitados por padrão quando
+  `APP_ENV=production`. Use `API_DOCS_ENABLED=true` somente quando a exposição
+  for intencional e protegida.
+- Requisições de autenticação aceitam no máximo `HTTP_MAX_BODY_BYTES` bytes
+  (padrão: 65536).
+- Os custos de senha são configurados por `ARGON2_MEMORY_KIB`,
+  `ARGON2_ITERATIONS` e `ARGON2_PARALLELISM`. Valores fora dos limites seguros
+  fazem a aplicação falhar no startup.
+- CORS permanece desabilitado na V1, adequada a clientes server-to-server. Antes
+  de permitir acesso direto de navegadores, configure uma allowlist explícita;
+  nunca use origem curinga junto com credenciais.

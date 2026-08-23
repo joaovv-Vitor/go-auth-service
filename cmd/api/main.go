@@ -49,7 +49,11 @@ func main() {
 		log.Fatalf("load JWT keys: %v", err)
 	}
 	users := user.NewPostgresRepository(db)
-	hasher := password.DefaultHasher()
+	hasher := password.Hasher{
+		Memory:      cfg.Argon2MemoryKiB,
+		Iterations:  cfg.Argon2Iterations,
+		Parallelism: cfg.Argon2Parallelism,
+	}
 	registerService := auth.NewService(users, hasher)
 	loginService := auth.NewLoginService(users, hasher, signer, token.NewStore(db), cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
 
