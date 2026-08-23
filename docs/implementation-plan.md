@@ -463,7 +463,7 @@ Tarefas:
 - [x] testar concorrência e executar `go test -race ./...`;
 - [x] validar `go test`, `go vet`, formatação e análise de vulnerabilidades;
 - [x] validar que OpenAPI inclui contratos, erros e autenticação;
-- [ ] criar fixtures sem credenciais reais.
+- [x] criar fixtures sem credenciais reais.
 
 Critério de aceite:
 

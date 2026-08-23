@@ -1,8 +1,6 @@
 package token
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
 	"slices"
 	"testing"
 	"time"
@@ -10,17 +8,15 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	authclock "github.com/joaovv-Vitor/go-auth-service/internal/clock"
+	"github.com/joaovv-Vitor/go-auth-service/internal/testsupport"
 	"github.com/joaovv-Vitor/go-auth-service/internal/user"
 )
 
 func TestSignerIssuesRS256TokenAndJWKS(t *testing.T) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("generate key: %v", err)
-	}
+	privateKey := testsupport.RSAKey(t)
 	now := time.Date(2030, time.January, 2, 3, 4, 5, 0, time.UTC)
 	signer := NewSignerWithClock(privateKey, &privateKey.PublicKey, "auth-service", "auth-api", time.Minute, authclock.Func(func() time.Time { return now }))
-	tokenString, err := signer.Issue(user.User{ID: uuid.New(), Email: "joao@example.com", Role: user.RoleUser})
+	tokenString, err := signer.Issue(user.User{ID: uuid.New(), Email: testsupport.FixtureEmail, Role: user.RoleUser})
 	if err != nil {
 		t.Fatalf("issue token: %v", err)
 	}
@@ -32,7 +28,7 @@ func TestSignerIssuesRS256TokenAndJWKS(t *testing.T) {
 	if err != nil || !parsed.Valid {
 		t.Fatalf("parse token: %v", err)
 	}
-	if claims.Email != "joao@example.com" || claims.Issuer != "auth-service" || claims.Subject == "" || !slices.Contains(claims.Audience, "auth-api") {
+	if claims.Email != testsupport.FixtureEmail || claims.Issuer != "auth-service" || claims.Subject == "" || !slices.Contains(claims.Audience, "auth-api") {
 		t.Fatalf("unexpected claims: %+v", claims)
 	}
 	if !claims.IssuedAt.Time.Equal(now) || !claims.ExpiresAt.Time.Equal(now.Add(time.Minute)) {
@@ -51,13 +47,10 @@ func TestSignerIssuesRS256TokenAndJWKS(t *testing.T) {
 }
 
 func TestSignerRejectsExpiredToken(t *testing.T) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("generate key: %v", err)
-	}
+	privateKey := testsupport.RSAKey(t)
 	now := time.Date(2030, time.January, 2, 3, 4, 5, 0, time.UTC)
 	signer := NewSignerWithClock(privateKey, &privateKey.PublicKey, "auth-service", "auth-api", time.Minute, authclock.Func(func() time.Time { return now }))
-	tokenString, err := signer.Issue(user.User{ID: uuid.New(), Email: "joao@example.com", Role: user.RoleUser})
+	tokenString, err := signer.Issue(user.User{ID: uuid.New(), Email: testsupport.FixtureEmail, Role: user.RoleUser})
 	if err != nil {
 		t.Fatalf("issue token: %v", err)
 	}
@@ -71,13 +64,10 @@ func TestSignerRejectsExpiredToken(t *testing.T) {
 }
 
 func TestSignerRejectsTokenForAnotherAudience(t *testing.T) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("generate key: %v", err)
-	}
+	privateKey := testsupport.RSAKey(t)
 	issuer := NewSigner(privateKey, &privateKey.PublicKey, "auth-service", "auth-api", time.Minute)
 	otherService := NewSigner(privateKey, &privateKey.PublicKey, "auth-service", "other-api", time.Minute)
-	tokenString, err := issuer.Issue(user.User{ID: uuid.New(), Email: "joao@example.com", Role: user.RoleUser})
+	tokenString, err := issuer.Issue(user.User{ID: uuid.New(), Email: testsupport.FixtureEmail, Role: user.RoleUser})
 	if err != nil {
 		t.Fatalf("issue token: %v", err)
 	}
@@ -87,14 +77,11 @@ func TestSignerRejectsTokenForAnotherAudience(t *testing.T) {
 }
 
 func TestSignerRejectsMissingAudience(t *testing.T) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("generate key: %v", err)
-	}
+	privateKey := testsupport.RSAKey(t)
 	signer := NewSigner(privateKey, &privateKey.PublicKey, "auth-service", "auth-api", time.Minute)
 	now := time.Now().UTC()
 	claims := Claims{
-		Email: "joao@example.com",
+		Email: testsupport.FixtureEmail,
 		Roles: []string{user.RoleUser},
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "auth-service",
@@ -115,12 +102,9 @@ func TestSignerRejectsMissingAudience(t *testing.T) {
 }
 
 func TestSignerRejectsUnexpectedIssuerAlgorithmAndKeyID(t *testing.T) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("generate key: %v", err)
-	}
+	privateKey := testsupport.RSAKey(t)
 	signer := NewSigner(privateKey, &privateKey.PublicKey, "auth-service", "auth-api", time.Minute)
-	found := user.User{ID: uuid.New(), Email: "joao@example.com", Role: user.RoleUser}
+	found := user.User{ID: uuid.New(), Email: testsupport.FixtureEmail, Role: user.RoleUser}
 	validToken, err := signer.Issue(found)
 	if err != nil {
 		t.Fatalf("issue valid token: %v", err)
