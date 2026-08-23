@@ -2,8 +2,6 @@ package token
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
 	"errors"
 	"sync"
 	"testing"
@@ -174,10 +172,7 @@ func TestLogoutDoesNotInvalidateAlreadyIssuedAccessToken(t *testing.T) {
 		t.Fatalf("persist refresh token: %v", err)
 	}
 
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("generate signing key: %v", err)
-	}
+	privateKey := testsupport.RSAKey(t)
 	signer := NewSigner(privateKey, &privateKey.PublicKey, "integration-auth-service", "auth-api", 15*time.Minute)
 	accessToken, err := signer.Issue(user.User{ID: userID, Email: "stateless-access@example.com", Role: user.RoleUser})
 	if err != nil {
@@ -218,13 +213,13 @@ func TestRefreshRotationRejectsTokenAtControlledExpirationBoundary(t *testing.T)
 
 func insertTestUser(t *testing.T, database *testsupport.Postgres, email string) uuid.UUID {
 	t.Helper()
-	id := uuid.New()
+	identity := testsupport.NewIdentity(email)
 	_, err := database.Pool.Exec(context.Background(), `
 		INSERT INTO users (id, name, email, password_hash, role)
-		VALUES ($1, 'Integration User', $2, 'argon2id-phc', 'USER')
-	`, id, email)
+		VALUES ($1, $2, $3, $4, $5)
+	`, identity.ID, identity.Name, identity.Email, identity.PasswordHash, identity.Role)
 	if err != nil {
 		t.Fatalf("insert integration user: %v", err)
 	}
-	return id
+	return identity.ID
 }

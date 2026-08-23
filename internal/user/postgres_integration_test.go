@@ -12,12 +12,13 @@ func TestPostgresRepositoryCreatesFindsAndRejectsDuplicateEmail(t *testing.T) {
 	database := testsupport.OpenPostgres(t)
 	repository := NewPostgresRepository(database.Pool)
 	ctx := context.Background()
+	identity := testsupport.NewIdentity("")
 
 	created, err := repository.Create(ctx, User{
-		Name:         "João",
-		Email:        "joao@example.com",
-		PasswordHash: "argon2id-phc",
-		Role:         RoleUser,
+		Name:         identity.Name,
+		Email:        identity.Email,
+		PasswordHash: identity.PasswordHash,
+		Role:         identity.Role,
 	})
 	if err != nil {
 		t.Fatalf("create user: %v", err)
@@ -34,7 +35,7 @@ func TestPostgresRepositoryCreatesFindsAndRejectsDuplicateEmail(t *testing.T) {
 	if err != nil {
 		t.Fatalf("find user by ID: %v", err)
 	}
-	if byEmail.ID != created.ID || byID.Email != created.Email || byID.PasswordHash != "argon2id-phc" {
+	if byEmail.ID != created.ID || byID.Email != created.Email || byID.PasswordHash != identity.PasswordHash {
 		t.Fatalf("unexpected persisted users: byEmail=%+v byID=%+v", byEmail, byID)
 	}
 

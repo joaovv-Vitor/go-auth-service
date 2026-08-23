@@ -1,10 +1,10 @@
 package server
 
 import (
-	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"net/http"
 	"testing"
@@ -21,10 +21,8 @@ import (
 
 func TestCompleteV1AuthenticationFlow(t *testing.T) {
 	database := testsupport.OpenPostgres(t)
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("generate signing key: %v", err)
-	}
+	identity := testsupport.NewIdentity("")
+	privateKey := testsupport.RSAKey(t)
 	signer := token.NewSigner(privateKey, &privateKey.PublicKey, "integration-auth-service", "auth-api", 15*time.Minute)
 	users := user.NewPostgresRepository(database.Pool)
 	sessions := token.NewStore(database.Pool)
@@ -37,12 +35,12 @@ func TestCompleteV1AuthenticationFlow(t *testing.T) {
 	})
 
 	register := performRequest(t, handler, http.MethodPost, "/api/v1/auth/register",
-		`{"name":"João","email":"joao@example.com","password":"a-strong-password"}`,
+		fmt.Sprintf(`{"name":%q,"email":%q,"password":%q}`, identity.Name, identity.Email, identity.Password),
 		map[string]string{"Content-Type": "application/json"})
 	assertStatus(t, register.Code, http.StatusCreated, register.Body.String())
 
 	login := performRequest(t, handler, http.MethodPost, "/api/v1/auth/login",
-		`{"email":"joao@example.com","password":"a-strong-password"}`,
+		fmt.Sprintf(`{"email":%q,"password":%q}`, identity.Email, identity.Password),
 		map[string]string{"Content-Type": "application/json"})
 	assertStatus(t, login.Code, http.StatusOK, login.Body.String())
 	loginTokens := decodeTokenPair(t, login.Body.Bytes())
