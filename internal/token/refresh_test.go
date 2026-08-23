@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	authclock "github.com/joaovv-Vitor/go-auth-service/internal/clock"
 )
 
 func TestRefreshTokenCanBeParsedWithoutPersistingPlaintext(t *testing.T) {
@@ -46,6 +47,19 @@ func TestRotatedRefreshTokenPreservesFamilyExpiration(t *testing.T) {
 	}
 	if !rotated.ExpiresAt.Equal(expiresAt) {
 		t.Fatalf("expected absolute expiration %s, got %s", expiresAt, rotated.ExpiresAt)
+	}
+}
+
+func TestRefreshTokenUsesControlledClockForExpiration(t *testing.T) {
+	now := time.Date(2030, time.January, 2, 3, 4, 5, 123456000, time.UTC)
+	ttl := 7 * 24 * time.Hour
+
+	_, refresh, err := NewRefreshTokenWithClock(ttl, authclock.Func(func() time.Time { return now }))
+	if err != nil {
+		t.Fatalf("create refresh token: %v", err)
+	}
+	if !refresh.ExpiresAt.Equal(now.Add(ttl)) {
+		t.Fatalf("expected expiration %s, got %s", now.Add(ttl), refresh.ExpiresAt)
 	}
 }
 

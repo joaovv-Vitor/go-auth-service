@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	authclock "github.com/joaovv-Vitor/go-auth-service/internal/clock"
 	"github.com/joaovv-Vitor/go-auth-service/internal/password"
 	"github.com/joaovv-Vitor/go-auth-service/internal/token"
 	"github.com/joaovv-Vitor/go-auth-service/internal/user"
@@ -70,6 +71,7 @@ type LoginService struct {
 	}
 	accessTTL  time.Duration
 	refreshTTL time.Duration
+	clock      authclock.Clock
 }
 
 var ErrInvalidRefresh = errors.New("invalid refresh token")
@@ -93,7 +95,33 @@ func NewLoginService(
 	accessTTL time.Duration,
 	refreshTTL time.Duration,
 ) *LoginService {
-	return &LoginService{users: users, hasher: hasher, access: access, sessions: sessions, accessTTL: accessTTL, refreshTTL: refreshTTL}
+	return NewLoginServiceWithClock(users, hasher, access, sessions, accessTTL, refreshTTL, authclock.System{})
+}
+
+func NewLoginServiceWithClock(
+	users interface {
+		FindByEmail(context.Context, string) (user.User, error)
+		FindByID(context.Context, uuid.UUID) (user.User, error)
+	},
+	hasher interface {
+		Verify(string, string) (bool, error)
+	},
+	access interface {
+		Issue(user.User) (string, error)
+	},
+	sessions interface {
+		Create(context.Context, uuid.UUID, token.RefreshToken) error
+		Rotate(context.Context, string) (uuid.UUID, string, error)
+		Revoke(context.Context, string) error
+	},
+	accessTTL time.Duration,
+	refreshTTL time.Duration,
+	clock authclock.Clock,
+) *LoginService {
+	if clock == nil {
+		clock = authclock.System{}
+	}
+	return &LoginService{users: users, hasher: hasher, access: access, sessions: sessions, accessTTL: accessTTL, refreshTTL: refreshTTL, clock: clock}
 }
 
 func (s *LoginService) Login(ctx context.Context, input LoginInput) (LoginResponse, error) {
@@ -121,7 +149,7 @@ func (s *LoginService) Login(ctx context.Context, input LoginInput) (LoginRespon
 	if err != nil {
 		return LoginResponse{}, fmt.Errorf("issue access token: %w", err)
 	}
-	refreshPlaintext, refresh, err := token.NewRefreshToken(s.refreshTTL)
+	refreshPlaintext, refresh, err := token.NewRefreshTokenWithClock(s.refreshTTL, s.clock)
 	if err != nil {
 		return LoginResponse{}, fmt.Errorf("issue refresh token: %w", err)
 	}

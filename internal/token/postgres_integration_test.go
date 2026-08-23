@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	authclock "github.com/joaovv-Vitor/go-auth-service/internal/clock"
 	"github.com/joaovv-Vitor/go-auth-service/internal/testsupport"
 	"github.com/joaovv-Vitor/go-auth-service/internal/user"
 )
@@ -191,6 +192,27 @@ func TestLogoutDoesNotInvalidateAlreadyIssuedAccessToken(t *testing.T) {
 	}
 	if _, _, err := store.Rotate(ctx, presented); !errors.Is(err, ErrInvalidRefreshToken) {
 		t.Fatalf("expected refresh token to be revoked after logout, got %v", err)
+	}
+}
+
+func TestRefreshRotationRejectsTokenAtControlledExpirationBoundary(t *testing.T) {
+	database := testsupport.OpenPostgres(t)
+	ctx := context.Background()
+	userID := insertTestUser(t, database, "controlled-expiration@example.com")
+	now := time.Date(2030, time.January, 2, 3, 4, 5, 0, time.UTC)
+	clock := authclock.Func(func() time.Time { return now })
+	store := NewStoreWithClock(database.Pool, clock)
+	presented, refresh, err := NewRefreshTokenWithClock(time.Hour, clock)
+	if err != nil {
+		t.Fatalf("create refresh token: %v", err)
+	}
+	if err := store.Create(ctx, userID, refresh); err != nil {
+		t.Fatalf("persist refresh token: %v", err)
+	}
+
+	now = refresh.ExpiresAt
+	if _, _, err := store.Rotate(ctx, presented); !errors.Is(err, ErrInvalidRefreshToken) {
+		t.Fatalf("expected token to expire at boundary, got %v", err)
 	}
 }
 

@@ -9,6 +9,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	authclock "github.com/joaovv-Vitor/go-auth-service/internal/clock"
 	"github.com/joaovv-Vitor/go-auth-service/internal/user"
 )
 
@@ -17,7 +18,8 @@ func TestSignerIssuesRS256TokenAndJWKS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("generate key: %v", err)
 	}
-	signer := NewSigner(privateKey, &privateKey.PublicKey, "auth-service", "auth-api", time.Minute)
+	now := time.Date(2030, time.January, 2, 3, 4, 5, 0, time.UTC)
+	signer := NewSignerWithClock(privateKey, &privateKey.PublicKey, "auth-service", "auth-api", time.Minute, authclock.Func(func() time.Time { return now }))
 	tokenString, err := signer.Issue(user.User{ID: uuid.New(), Email: "joao@example.com", Role: user.RoleUser})
 	if err != nil {
 		t.Fatalf("issue token: %v", err)
@@ -26,12 +28,15 @@ func TestSignerIssuesRS256TokenAndJWKS(t *testing.T) {
 	claims := &Claims{}
 	parsed, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (any, error) {
 		return signer.PublicKey(), nil
-	}, jwt.WithValidMethods([]string{"RS256"}), jwt.WithIssuer("auth-service"), jwt.WithAudience("auth-api"))
+	}, jwt.WithValidMethods([]string{"RS256"}), jwt.WithIssuer("auth-service"), jwt.WithAudience("auth-api"), jwt.WithTimeFunc(func() time.Time { return now }))
 	if err != nil || !parsed.Valid {
 		t.Fatalf("parse token: %v", err)
 	}
 	if claims.Email != "joao@example.com" || claims.Issuer != "auth-service" || claims.Subject == "" || !slices.Contains(claims.Audience, "auth-api") {
 		t.Fatalf("unexpected claims: %+v", claims)
+	}
+	if !claims.IssuedAt.Time.Equal(now) || !claims.ExpiresAt.Time.Equal(now.Add(time.Minute)) {
+		t.Fatalf("expected deterministic validity window, got issued_at=%s expires_at=%s", claims.IssuedAt, claims.ExpiresAt)
 	}
 	if signer.PublicJWK().Kid != signer.KeyID() || signer.PublicJWK().Alg != "RS256" {
 		t.Fatalf("unexpected JWK: %+v", signer.PublicJWK())
@@ -50,13 +55,18 @@ func TestSignerRejectsExpiredToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("generate key: %v", err)
 	}
-	signer := NewSigner(privateKey, &privateKey.PublicKey, "auth-service", "auth-api", -time.Minute)
+	now := time.Date(2030, time.January, 2, 3, 4, 5, 0, time.UTC)
+	signer := NewSignerWithClock(privateKey, &privateKey.PublicKey, "auth-service", "auth-api", time.Minute, authclock.Func(func() time.Time { return now }))
 	tokenString, err := signer.Issue(user.User{ID: uuid.New(), Email: "joao@example.com", Role: user.RoleUser})
 	if err != nil {
-		t.Fatalf("issue expired token: %v", err)
+		t.Fatalf("issue token: %v", err)
 	}
+	if _, err := signer.Validate(tokenString); err != nil {
+		t.Fatalf("validate token before expiration: %v", err)
+	}
+	now = now.Add(time.Minute)
 	if _, err := signer.Validate(tokenString); err == nil {
-		t.Fatal("expected expired token to be rejected")
+		t.Fatal("expected token to be rejected at its expiration boundary")
 	}
 }
 
