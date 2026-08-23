@@ -455,7 +455,7 @@ Critério de aceite:
 
 Tarefas:
 
-- [ ] cobrir services com testes de unidade e relógio controlável;
+- [x] cobrir services com testes de unidade e relógio controlável;
 - [x] cobrir repositories contra PostgreSQL real;
 - [x] cobrir handlers com `httptest` e Huma;
 - [x] executar o fluxo completo da seção 29 do design;

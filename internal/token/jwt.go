@@ -13,6 +13,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	authclock "github.com/joaovv-Vitor/go-auth-service/internal/clock"
 	"github.com/joaovv-Vitor/go-auth-service/internal/user"
 )
 
@@ -29,6 +30,7 @@ type Signer struct {
 	audience   string
 	ttl        time.Duration
 	kid        string
+	clock      authclock.Clock
 }
 
 func LoadSigner(privatePath, publicPath, issuer, audience string, ttl time.Duration) (*Signer, error) {
@@ -63,6 +65,13 @@ func LoadSigner(privatePath, publicPath, issuer, audience string, ttl time.Durat
 }
 
 func NewSigner(privateKey *rsa.PrivateKey, publicKey *rsa.PublicKey, issuer, audience string, ttl time.Duration) *Signer {
+	return NewSignerWithClock(privateKey, publicKey, issuer, audience, ttl, authclock.System{})
+}
+
+func NewSignerWithClock(privateKey *rsa.PrivateKey, publicKey *rsa.PublicKey, issuer, audience string, ttl time.Duration, clock authclock.Clock) *Signer {
+	if clock == nil {
+		clock = authclock.System{}
+	}
 	return &Signer{
 		privateKey: privateKey,
 		publicKey:  publicKey,
@@ -70,11 +79,12 @@ func NewSigner(privateKey *rsa.PrivateKey, publicKey *rsa.PublicKey, issuer, aud
 		audience:   audience,
 		ttl:        ttl,
 		kid:        keyID(publicKey),
+		clock:      clock,
 	}
 }
 
 func (s *Signer) Issue(user user.User) (string, error) {
-	now := time.Now().UTC()
+	now := s.clock.Now()
 	claims := Claims{
 		Email: user.Email,
 		Roles: []string{user.Role},
@@ -132,7 +142,7 @@ func (s *Signer) Validate(tokenString string) (*Claims, error) {
 			return nil, errors.New("unexpected JWT key id")
 		}
 		return s.publicKey, nil
-	}, jwt.WithValidMethods([]string{"RS256"}), jwt.WithIssuer(s.issuer), jwt.WithAudience(s.audience))
+	}, jwt.WithValidMethods([]string{"RS256"}), jwt.WithIssuer(s.issuer), jwt.WithAudience(s.audience), jwt.WithTimeFunc(s.clock.Now))
 	if err != nil || !parsed.Valid {
 		if err == nil {
 			err = errors.New("invalid JWT")

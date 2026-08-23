@@ -11,14 +11,23 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	authclock "github.com/joaovv-Vitor/go-auth-service/internal/clock"
 )
 
 type Store struct {
-	db *pgxpool.Pool
+	db    *pgxpool.Pool
+	clock authclock.Clock
 }
 
 func NewStore(db *pgxpool.Pool) *Store {
-	return &Store{db: db}
+	return NewStoreWithClock(db, authclock.System{})
+}
+
+func NewStoreWithClock(db *pgxpool.Pool, clock authclock.Clock) *Store {
+	if clock == nil {
+		clock = authclock.System{}
+	}
+	return &Store{db: db, clock: clock}
 }
 
 func (s *Store) Create(ctx context.Context, userID uuid.UUID, refresh RefreshToken) error {
@@ -71,7 +80,7 @@ func (s *Store) Rotate(ctx context.Context, presented string) (uuid.UUID, string
 		}
 		return uuid.Nil, "", ErrRefreshTokenReuse
 	}
-	if revokedAt != nil || time.Now().UTC().After(current.ExpiresAt) {
+	if revokedAt != nil || !s.clock.Now().Before(current.ExpiresAt) {
 		return uuid.Nil, "", ErrInvalidRefreshToken
 	}
 

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	authclock "github.com/joaovv-Vitor/go-auth-service/internal/clock"
 )
 
 var (
@@ -25,15 +26,22 @@ type RefreshToken struct {
 }
 
 func NewRefreshToken(ttl time.Duration) (string, RefreshToken, error) {
+	return NewRefreshTokenWithClock(ttl, authclock.System{})
+}
+
+func NewRefreshTokenWithClock(ttl time.Duration, clock authclock.Clock) (string, RefreshToken, error) {
 	if ttl <= 0 {
 		return "", RefreshToken{}, fmt.Errorf("refresh token TTL must be greater than zero")
+	}
+	if clock == nil {
+		clock = authclock.System{}
 	}
 	secret := make([]byte, 32)
 	if _, err := rand.Read(secret); err != nil {
 		return "", RefreshToken{}, fmt.Errorf("generate refresh token: %w", err)
 	}
 
-	return newRefreshToken(uuid.New(), secret, uuid.New(), time.Now().UTC().Add(ttl))
+	return newRefreshToken(uuid.New(), secret, uuid.New(), clock.Now().Add(ttl))
 }
 
 func newRefreshToken(familyID uuid.UUID, secret []byte, id uuid.UUID, expiresAt time.Time) (string, RefreshToken, error) {
