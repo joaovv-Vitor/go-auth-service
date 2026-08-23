@@ -483,8 +483,8 @@ Tarefas:
 - [x] adicionar healthcheck ao PostgreSQL e à API no Compose;
 - [x] definir como migrations rodam antes da aplicação;
 - [x] adicionar pipeline de CI para build, testes, race, vet e vulnerabilidades;
-- [ ] documentar geração de chaves apenas para desenvolvimento;
-- [ ] documentar configuração de produção e rotação futura de chaves;
+- [x] documentar geração de chaves apenas para desenvolvimento;
+- [x] documentar configuração de produção e rotação futura de chaves;
 - [ ] produzir binário e imagem reproduzíveis.
 
 Critério de aceite:
