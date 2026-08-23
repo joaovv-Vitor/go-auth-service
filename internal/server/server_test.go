@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/joaovv-Vitor/go-auth-service/internal/auth"
@@ -187,6 +189,29 @@ func TestRequestLoggerDoesNotRecordSecrets(t *testing.T) {
 	}
 	if strings.Contains(output.String(), secret) || strings.Contains(output.String(), "Authorization") {
 		t.Fatalf("request log leaked sensitive data: %s", output.String())
+	}
+}
+
+func TestClientIPDoesNotTrustForwardedHeaders(t *testing.T) {
+	var output bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&output, nil))
+	router := chi.NewRouter()
+	router.Use(middleware.ClientIPFromRemoteAddr)
+	router.Use(requestLogger(logger))
+	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	request := httptest.NewRequest(http.MethodGet, "/health", nil)
+	request.RemoteAddr = "203.0.113.10:12345"
+	request.Header.Set("X-Forwarded-For", "198.51.100.7")
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+
+	if !strings.Contains(output.String(), `"client_ip":"203.0.113.10"`) {
+		t.Fatalf("expected socket client IP in log: %s", output.String())
+	}
+	if strings.Contains(output.String(), "198.51.100.7") {
+		t.Fatalf("forwarded client-controlled IP leaked into trusted log field: %s", output.String())
 	}
 }
 

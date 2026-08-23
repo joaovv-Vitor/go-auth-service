@@ -461,7 +461,7 @@ Tarefas:
 - [x] executar o fluxo completo da seção 29 do design;
 - [x] testar rollback quando uma rotação falha no meio da transação;
 - [x] testar concorrência e executar `go test -race ./...`;
-- [ ] validar `go test`, `go vet`, formatação e análise de vulnerabilidades;
+- [x] validar `go test`, `go vet`, formatação e análise de vulnerabilidades;
 - [x] validar que OpenAPI inclui contratos, erros e autenticação;
 - [ ] criar fixtures sem credenciais reais.
 
@@ -482,8 +482,7 @@ Tarefas:
 - [x] montar chaves por secret/volume, nunca por `COPY` no build;
 - [x] adicionar healthcheck ao PostgreSQL e à API no Compose;
 - [x] definir como migrations rodam antes da aplicação;
-- [ ] adicionar pipeline de CI para build, testes, race quando viável, vet e
-  vulnerabilidades;
+- [x] adicionar pipeline de CI para build, testes, race, vet e vulnerabilidades;
 - [ ] documentar geração de chaves apenas para desenvolvimento;
 - [ ] documentar configuração de produção e rotação futura de chaves;
 - [ ] produzir binário e imagem reproduzíveis.

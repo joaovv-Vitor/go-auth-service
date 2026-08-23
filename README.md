@@ -54,6 +54,13 @@ Para validar também acessos concorrentes:
 TEST_DATABASE_URL='postgres://postgres:postgres@localhost:5432/auth_service?sslmode=disable' go test -race -count=1 ./...
 ```
 
+O workflow `.github/workflows/ci.yml` executa em pushes e pull requests:
+
+- `gofmt` e `go vet`;
+- testes com race detector e PostgreSQL 17 real;
+- `govulncheck`;
+- build dos binários e da imagem Docker.
+
 ## Endpoints iniciais
 
 - `GET /health`

@@ -42,7 +42,7 @@ func New(cfg config.Config, deps Dependencies) *http.Server {
 func NewHandler(cfg config.Config, deps Dependencies) http.Handler {
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
-	router.Use(middleware.RealIP)
+	router.Use(middleware.ClientIPFromRemoteAddr)
 	router.Use(middleware.Recoverer)
 	router.Use(securityHeaders)
 	router.Use(requestLogger(slog.Default()))
@@ -147,6 +147,7 @@ func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 
 			logger.InfoContext(r.Context(), "http request",
 				"request_id", middleware.GetReqID(r.Context()),
+				"client_ip", middleware.GetClientIP(r.Context()),
 				"method", r.Method,
 				"path", r.URL.Path,
 				"status", responseStatus(writer.status),
