@@ -454,8 +454,8 @@ Tarefas:
 - [ ] cobrir services com testes de unidade e relógio controlável;
 - [x] cobrir repositories contra PostgreSQL real;
 - [x] cobrir handlers com `httptest` e Huma;
-- [ ] executar o fluxo completo da seção 29 do design;
-- [ ] testar rollback quando uma rotação falha no meio da transação;
+- [x] executar o fluxo completo da seção 29 do design;
+- [x] testar rollback quando uma rotação falha no meio da transação;
 - [x] testar concorrência e executar `go test -race ./...`;
 - [ ] validar `go test`, `go vet`, formatação e análise de vulnerabilidades;
 - [x] validar que OpenAPI inclui contratos, erros e autenticação;
@@ -541,18 +541,18 @@ Cada incremento deve terminar compilando e com testes verdes:
 
 A V1 estará pronta quando:
 
-- [ ] usuário pode ser cadastrado com e-mail único e senha Argon2id;
-- [ ] login retorna access token RS256 e refresh token opaco;
-- [ ] outro serviço valida o JWT usando apenas o JWKS público;
-- [ ] `/users/me` retorna a identidade do token válido;
-- [ ] refresh rotaciona o token de forma atômica;
-- [ ] reutilização de refresh token é detectada e revoga a família;
-- [ ] logout impede qualquer nova renovação da sessão;
+- [x] usuário pode ser cadastrado com e-mail único e senha Argon2id;
+- [x] login retorna access token RS256 e refresh token opaco;
+- [x] outro serviço valida o JWT usando apenas o JWKS público;
+- [x] `/users/me` retorna a identidade do token válido;
+- [x] refresh rotaciona o token de forma atômica;
+- [x] reutilização de refresh token é detectada e revoga a família;
+- [x] logout impede qualquer nova renovação da sessão;
 - [ ] erros são consistentes e não permitem enumeração óbvia de usuários;
 - [ ] logs são estruturados e não contêm segredos;
 - [ ] Swagger/OpenAPI descreve todas as rotas, schemas e autenticação;
 - [ ] migrations, testes, Docker e instruções funcionam em checkout limpo;
-- [ ] todas as condições da seção 29 do design foram demonstradas.
+- [x] todas as condições da seção 29 do design foram demonstradas.
 
 ## 10. Itens explicitamente adiados
 

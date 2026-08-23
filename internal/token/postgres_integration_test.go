@@ -70,6 +70,69 @@ func TestConcurrentRefreshRotationAllowsOneSuccessAndRevokesReusedFamily(t *test
 	}
 }
 
+func TestRefreshRotationRollsBackWhenLinkingTokensFails(t *testing.T) {
+	database := testsupport.OpenPostgres(t)
+	ctx := context.Background()
+	userID := insertTestUser(t, database, "rollback@example.com")
+	store := NewStore(database.Pool)
+	presented, initial, err := NewRefreshToken(7 * 24 * time.Hour)
+	if err != nil {
+		t.Fatalf("create initial refresh token: %v", err)
+	}
+	if err := store.Create(ctx, userID, initial); err != nil {
+		t.Fatalf("persist initial refresh token: %v", err)
+	}
+
+	_, err = database.Pool.Exec(ctx, `
+		CREATE FUNCTION fail_refresh_link() RETURNS trigger AS $$
+		BEGIN
+			IF NEW.replaced_by_token_id IS NOT NULL THEN
+				RAISE EXCEPTION 'injected refresh link failure';
+			END IF;
+			RETURN NEW;
+		END;
+		$$ LANGUAGE plpgsql
+	`)
+	if err != nil {
+		t.Fatalf("create failure function: %v", err)
+	}
+	_, err = database.Pool.Exec(ctx, `
+		CREATE TRIGGER fail_refresh_link_trigger
+		BEFORE UPDATE ON refresh_tokens
+		FOR EACH ROW EXECUTE FUNCTION fail_refresh_link()
+	`)
+	if err != nil {
+		t.Fatalf("create failure trigger: %v", err)
+	}
+
+	if _, _, err := store.Rotate(ctx, presented); err == nil {
+		t.Fatal("expected injected rotation failure")
+	}
+
+	var tokenCount, usedCount, revokedCount int
+	err = database.Pool.QueryRow(ctx, `
+		SELECT COUNT(*), COUNT(used_at), COUNT(revoked_at)
+		FROM refresh_tokens
+		WHERE family_id = $1
+	`, initial.FamilyID).Scan(&tokenCount, &usedCount, &revokedCount)
+	if err != nil {
+		t.Fatalf("inspect rolled back rotation: %v", err)
+	}
+	if tokenCount != 1 || usedCount != 0 || revokedCount != 0 {
+		t.Fatalf("expected untouched initial token after rollback, got tokens=%d used=%d revoked=%d", tokenCount, usedCount, revokedCount)
+	}
+
+	if _, err := database.Pool.Exec(ctx, `DROP TRIGGER fail_refresh_link_trigger ON refresh_tokens`); err != nil {
+		t.Fatalf("drop failure trigger: %v", err)
+	}
+	if _, err := database.Pool.Exec(ctx, `DROP FUNCTION fail_refresh_link()`); err != nil {
+		t.Fatalf("drop failure function: %v", err)
+	}
+	if _, _, err := store.Rotate(ctx, presented); err != nil {
+		t.Fatalf("expected initial token to remain usable after rollback: %v", err)
+	}
+}
+
 func TestLogoutRevokesEveryRefreshTokenInFamily(t *testing.T) {
 	database := testsupport.OpenPostgres(t)
 	ctx := context.Background()
